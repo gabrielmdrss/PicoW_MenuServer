@@ -9,6 +9,8 @@
 #include "pico/binary_info.h"
 #include "hardware/i2c.h"
 #include "hardware/adc.h"
+#include "hardware/pwm.h"
+#include "hardware/clocks.h"
 #include "ssd1306/ssd1306_fonts.h"
 #include "ssd1306/ssd1306.h"
 #include "icons.h"
@@ -23,6 +25,17 @@
 #define BUTTON_A 5  ///< Button for changing options/settings.
 #define BUTTON_B 6   ///< Button for confirming/entering a selection.
 
+//-----------------------------Buzzer Definitions-------------------------------
+
+#define BUZZER_PIN 21    // Pino do buzzer
+#define MIN_FREQUENCY 10 // Frequência mínima do buzzer (Hz)
+#define MAX_FREQUENCY 2000 // Frequência máxima do buzzer (Hz)
+#define ADC_UPPER_THRESHOLD 3500 // Limite superior do ADC para incrementar a frequência
+#define ADC_LOWER_THRESHOLD 850  // Limite inferior do ADC para decrementar a frequência
+#define STEP 20              // Incremento ou decremento por iteração
+float frequency = MIN_FREQUENCY;
+int Limit_Buzzer = 0;
+uint8_t x_distance;
 
 // --------------------------- Low Pass Filter Function ---------------------------
 
@@ -42,6 +55,89 @@ uint low_pass_filter(uint new_value) {
 
     filtered_value = (alpha * new_value) + ((1 - alpha) * filtered_value);
     return filtered_value;
+}
+
+// ------------------------------- Buzzer Functions -------------------------------
+
+// Inicializa o PWM para o buzzer
+void pwm_init_buzzer(uint pin) {
+    gpio_set_function(pin, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(pin);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv(&config, 1.0f); // Divisor inicial
+    pwm_init(slice_num, &config, true);
+    pwm_set_gpio_level(pin, 0); // Inicia com nível baixo
+}
+
+// Define a frequência do buzzer
+void set_buzzer_frequency(uint pin, float frequency) {
+    uint slice_num = pwm_gpio_to_slice_num(pin);
+
+    // Calcula o valor de "top" e ajusta o divisor
+    uint32_t source_hz = clock_get_hz(clk_sys);
+    float divisor = (float)source_hz / (frequency * 4096.0f);
+    uint32_t top = source_hz / (frequency * divisor);
+
+    pwm_set_clkdiv(slice_num, divisor); // Configura o divisor
+    pwm_set_wrap(slice_num, top - 1);  // Configura o contador superior
+    pwm_set_gpio_level(pin, top / 2);  // Duty cycle de 50%
+}
+
+void menu_enter_sound(uint pin) {
+    
+	uint frequencies[3];
+
+    if (frequency <= 210) {
+        frequencies[0] = frequency + 300;
+        frequencies[1] = 10;
+        frequencies[2] = 110; // Tons crescentes
+    } else if (frequency >= 1710) {
+        frequencies[0] = 2010;
+        frequencies[1] = frequency - 200;
+        frequencies[2] = frequency - 100; // Tons decrescentes
+    } else {
+        frequencies[0] = frequency + 300;
+        frequencies[1] = frequency - 200;
+        frequencies[2] = frequency - 100; // Combinação de tons
+    }
+
+    uint duration_ms = 75; // Duração de cada tom
+
+    for (int i = 0; i < 3; i++) {
+        set_buzzer_frequency(pin, frequencies[i]); 	// Configura o tom
+        pwm_set_gpio_level(pin, 2048);            	// Ativa o buzzer
+        sleep_ms(duration_ms);                   	// Duração do tom
+    }
+    pwm_set_gpio_level(pin, 0); // Desativa o buzzer
+}
+
+void menu_exit_sound(uint pin) {
+
+    // Frequências para o som de saída  
+	uint frequencies[3];
+
+    if (frequency <= 310) {
+        frequencies[0] = 10;
+        frequencies[1] = frequency + 200;
+        frequencies[2] = frequency + 100; // Tons crescentes
+    } else if (frequency >= 1810) {
+        frequencies[0] = frequency - 300;
+        frequencies[1] = 2010;
+        frequencies[2] = 1910; // Tons decrescentes
+    } else {
+        frequencies[0] = frequency - 300;
+        frequencies[1] = frequency + 200;
+        frequencies[2] = frequency + 100; // Combinação de tons
+    }
+
+	uint duration_ms = 75; // Duração de cada tom
+
+    for (int i = 0; i < 3; i++) {
+        set_buzzer_frequency(pin, frequencies[i]); // Configura o tom
+        pwm_set_gpio_level(pin, 2048);            // Ativa o buzzer
+        sleep_ms(duration_ms);                   // Duração do tom
+    }
+    pwm_set_gpio_level(pin, 0); // Desativa o buzzer
 }
 
 
@@ -157,14 +253,18 @@ void menu(void) {
 			if(!start_wifi){
 
 				// Writing de name of the WI-FI SSID
-				ssd1306_SetCursor(23, 25);
+				ssd1306_SetCursor(7, 25);
 				ssd1306_WriteString("Connecting in: ", Font_6x8, White);
 				ssd1306_SetCursor(7, 39);
 				ssd1306_WriteString(WIFI_SSID, Font_6x8, 1);
 
 				ssd1306_UpdateScreen();
 				if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASS, CYW43_AUTH_WPA2_AES_PSK, 10000)){
-					printf("Failed to connect to Wi-Fi\n");
+				ssd1306_SetCursor(18, 50);
+				ssd1306_WriteString("NOT CONNECTED", Font_7x10, 1);
+				ssd1306_UpdateScreen();
+				sleep_ms(2000);
+				current_screen = !current_screen;
 					return;
 				}
 
@@ -182,7 +282,7 @@ void menu(void) {
 
 			} else {
 
-				char buffer_string[7];
+				char buffer_string[7];  // Buffer to hold formatted string values
 				uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
 				sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
 				ssd1306_SetCursor(18, 25);
@@ -207,18 +307,54 @@ void menu(void) {
 			}
 
 			cyw43_arch_poll();  // Required to keep Wi-Fi active
-	
-		} else if (item_selected == 1){
+		} 
+
+		// LED Matrix OPTION
+		else if (item_selected == 1){
 			// External function for using and sampling gyroscope functionality
 			ssd1306_SetCursor(5, 30);
 			ssd1306_WriteString("MATRIX", Font_11x18, White);
 
-		}else if (item_selected == 2){
+		}
+		
+		// BUZZER OPTION
+		else if (item_selected == 2){
 			// External function for using and sampling the kalman filter functionality
-			ssd1306_SetCursor(5, 30);
-			ssd1306_WriteString("BUZZER", Font_11x18, White);
 
-		}else if (item_selected == 3){
+			char buffer_string[7];	// Buffer to hold formatted string values
+			ssd1306_SetCursor(25, 1);
+			ssd1306_WriteString("BUZZER PWM: ", Font_7x10, 1);
+			ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Draw header rectangle
+			ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Draw main display rectangle
+
+			// Lê o valor ADC e filtra
+			adc_select_input(1);
+			uint adc_x_raw = adc_read();
+			uint filtered_read = low_pass_filter(adc_x_raw);
+
+			// Ajuste da frequência
+			if (adc_x_raw > ADC_UPPER_THRESHOLD && frequency < MAX_FREQUENCY) {
+				frequency += STEP;
+			} else if (adc_x_raw < ADC_LOWER_THRESHOLD && frequency > MIN_FREQUENCY) {
+				frequency -= STEP;
+			}
+
+			// Configura o buzzer com a nova frequência
+			set_buzzer_frequency(BUZZER_PIN, frequency);
+
+			// Atualiza a barra no display
+			uint8_t x_distance = (uint8_t)(((frequency - MIN_FREQUENCY) * 128) / (MAX_FREQUENCY - MIN_FREQUENCY)) + 1;
+			ssd1306_DrawRectangle(1, 48, 128, 63, 1);
+			ssd1306_FillRectangle(1, 48, x_distance, 63, 1); // Barra horizontal
+
+			// Mostra a frequência atual
+			ssd1306_SetCursor(25, 30);
+			sprintf(buffer_string, "FREQ: %u Hz", (uint)frequency);
+			ssd1306_WriteString(buffer_string, Font_7x10, 1);
+
+		}
+		
+		else if (item_selected == 3){
 			// External function for using and sampling the inertial sensor calibration functionality
 			ssd1306_SetCursor(5, 30);
 			ssd1306_WriteString("CALIB", Font_11x18, White);
@@ -229,8 +365,20 @@ void menu(void) {
 
 		button_enter_clicked = 1;
 
+		// Turning off the buzzer
+		pwm_set_gpio_level(BUZZER_PIN, 0);
+
+		if(item_selected != 2){
+		
+		if(current_screen)
+			menu_enter_sound(BUZZER_PIN);
+		else
+			menu_exit_sound(BUZZER_PIN);
+		}
+
 		// Switching to the other screen type
 		current_screen = !current_screen;
+		
 	}
 
 	// If the ENTER button was release, the auxiliar variable returns to low
@@ -253,4 +401,5 @@ void menu(void) {
 
     ssd1306_UpdateScreen();
 }
+
 #endif /*MENU_H*/

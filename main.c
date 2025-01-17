@@ -25,6 +25,8 @@ int main() {
 
     adc_init();
     adc_gpio_init(26);
+    adc_gpio_init(27);
+    pwm_init_buzzer(BUZZER_PIN); // Inicializa o PWM para o buzzer
 /*---------------------------------------------------------------------------------------*/
 
     ssd1306_Init();

@@ -45,6 +45,7 @@
         "stdio.h": "c",
         "menu.h": "c",
         "i2c.h": "c",
-        "cyw43_arch.h": "c"
+        "cyw43_arch.h": "c",
+        "pwm.h": "c"
     }
 }
