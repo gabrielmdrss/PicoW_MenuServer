@@ -7,8 +7,8 @@
 
 #define LED_PIN 12          // Sets the LED pin
 #define BUTTON_A_PIN 5
-#define WIFI_SSID "XXX"  // Replace with the name of your Wi-Fi network
-#define WIFI_PASS "XXX" // Replace with your Wi-Fi network password
+#define WIFI_SSID "PROXXIMA273348-2.4 G"  // Replace with the name of your Wi-Fi network
+#define WIFI_PASS "31230618" // Replace with your Wi-Fi network password
 
 char http_response[2048];  // Buffering for HTTP responsev
 const char *button_state = "Button is not pressioned";
