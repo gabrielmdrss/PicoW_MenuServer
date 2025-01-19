@@ -1,3 +1,3 @@
 ## PicoW_MenuServer
 
-readme under construction
+README under construction
