@@ -20,9 +20,10 @@
 #endif
 #define MEM_ALIGNMENT               4
 #define MEM_SIZE                    4000
-#define MEMP_NUM_TCP_SEG            32
+#define MEMP_NUM_TCP_SEG            64 // Modified from 32 to 64
+#define MEMP_NUM_SYS_TIMEOUT        16 // Added
 #define MEMP_NUM_ARP_QUEUE          10
-#define PBUF_POOL_SIZE              24
+#define PBUF_POOL_SIZE              32 // Modified from 24 to 32
 #define LWIP_ARP                    1
 #define LWIP_ETHERNET               1
 #define LWIP_ICMP                   1

@@ -14,8 +14,6 @@ int main() {
     //sleep_ms(10000);
 
 /*------------------------------ Inicializando os pinos ---------------------------------*/
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_init(BUTTON_A);
     gpio_init(BUTTON_B);
     gpio_set_dir(BUTTON_A, GPIO_IN);
@@ -25,10 +23,11 @@ int main() {
 
     adc_init();
     adc_set_temp_sensor_enabled(true);
-    adc_select_input(4);
+    adc_select_input(4); // Selecione o sensor de temperatura interno
     adc_gpio_init(26);
     adc_gpio_init(27);
     pwm_init_buzzer(BUZZER_PIN); // Inicializa o PWM para o buzzer
+    configure_pwm();
 /*---------------------------------------------------------------------------------------*/
 
     ssd1306_Init();

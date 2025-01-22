@@ -16,8 +16,8 @@
 #define LED_BLUE_PIN 12   // Pino do azul
 
 #define MQTT_SERVER "10.220.0.83" //"broker.emqx.io" available at https://www.emqx.com/en/mqtt/public-mqtt5-broker
-#define SUBS_STR_NAME "LED/COMMAND"
-#define PUBLISH_STR_NAME "testy/temp"
+#define SUBS_STR_NAME "LED/TPC"
+#define PUBLISH_STR_NAME "TEMP/TPC"
 
 /* Choose 'C' for Celsius or 'F' for Fahrenheit. */
 #define TEMPERATURE_UNITS 'C'
@@ -47,9 +47,11 @@ void ftoa(float n, char* res, int afterpoint);
 int intToStr(int x, char str[], int d);
 
 void reverse(char* str, int len) ;
-char tempString[6];
+char tempString[12];
 int cont_envio;
 int check_current_screen;
+char last_led[32] = ""; // Declaração global ou estática
+
 
 static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags) {
     printf("Mensagem recebida: %.*s\n", len, data);
@@ -77,6 +79,15 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
         pwm_set_gpio_level(LED_BLUE_PIN, blue);
 
         printf("LED ajustado para: R=%d, G=%d, B=%d\n", red, green, blue);
+
+        strncpy(last_led, message, sizeof(last_led) - 1);
+        last_led[sizeof(last_led) - 1] = '\0'; // Garante o término da string
+
+        printf("Mensagem copiada para last_led: %s\n", message);
+
+        printf("Valor de last_led: %s\n", last_led);
+
+
     } else {
         printf("Mensagem inválida! Use o formato R/G/B.\n");
     }
@@ -111,6 +122,9 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection
  * pico-examples/adc/adc_console/adc_console.c */
 float read_onboard_temperature(const char unit) {
     
+    adc_set_temp_sensor_enabled(true);
+    adc_select_input(4); // Selecione o sensor de temperatura interno
+
     /* 12-bit conversion, assume max value == ADC_VREF == 3.3 V */
     const float conversionFactor = 3.3f / (1 << 12);
 
@@ -158,6 +172,9 @@ void ftoa(float n, char* res, int afterpoint)
 int intToStr(int x, char str[], int d) 
 { 
     int i = 0; 
+    if (x == 0) {
+    str[i++] = '0'; // Adiciona o dígito 0
+    }
     while (x) { 
         str[i++] = (x % 10) + '0'; 
         x = x / 10; 

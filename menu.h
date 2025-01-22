@@ -1,3 +1,4 @@
+
 #ifndef MENU_H
 #define MENU_H
 
@@ -44,6 +45,7 @@ uint8_t x_distance;
 ip_addr_t addr;
 mqtt_client_t *cliente_mqtt;
 int connected_mqtt;
+char *last_temp;
 
 // --------------------------- Low Pass Filter Function ---------------------------
 
@@ -337,13 +339,9 @@ void menu(void) {
 			} else {
 
 				if(!connected_mqtt){
-
-				ssd1306_SetCursor(10, 20);
-				ssd1306_WriteString("CONNECTING TO BROKER!!", Font_6x8, 1);
-				ssd1306_UpdateScreen();
 				
 				if (!ip4addr_aton(MQTT_SERVER, &addr)) {
-					ssd1306_SetCursor(20, 38);
+					ssd1306_SetCursor(20, 25);
 					ssd1306_WriteString("IP ERROR!!", Font_6x8, 1);
 					scape_function();
 				}
@@ -352,37 +350,44 @@ void menu(void) {
 				mqtt_set_inpub_callback(cliente_mqtt, &mqtt_incoming_publish_cb, &mqtt_incoming_data_cb, NULL);
 				err_t erro = mqtt_client_connect(cliente_mqtt, &addr, 1883, &mqtt_connection_cb, NULL, &mqtt_client_info);
 
-				connected_mqtt = 1;
-
 				if (erro != ERR_OK) {
-					ssd1306_SetCursor(15, 38);
+					ssd1306_SetCursor(12, 25);
 					ssd1306_WriteString("CONNECTION ERROR!!", Font_6x8, 1);
 					scape_function();
 				}
 
-				ssd1306_SetCursor(30, 50);
-				ssd1306_WriteString("CONNECTED", Font_7x10, 1);
+				ssd1306_SetCursor(9, 25);
+				ssd1306_WriteString("CONNECTED TO BROKER!!", Font_6x8, 1);
+				ssd1306_SetCursor(30, 35);
+				ssd1306_WriteString(MQTT_SERVER, Font_6x8, 1);
 				ssd1306_UpdateScreen();
 				sleep_ms(2000);
-				//connected_mqtt = 1;
+				connected_mqtt = 1;
 
 				}
 				
 				cont_envio++;
 				sleep_ms(1);
 
-				ssd1306_SetCursor(5, 20);
-                ssd1306_WriteString("PUB topic testy/temp = ", Font_6x8, White);
-				if(cont_envio >= 1000){
+				ssd1306_SetCursor(3, 22);
+                ssd1306_WriteString("PUB 'TEMP/TPC'= ", Font_6x8, White);
+				ssd1306_DrawRectangle(25, 20, 25, 37, 1);	// Draw main display rectangle
+				ssd1306_WriteString(last_temp, Font_6x8, White);
+				ssd1306_DrawRectangle(1, 37, 127, 63, 1);	// Draw main display rectangle
+				ssd1306_SetCursor(3, 40);
+                ssd1306_WriteString("SUB 'LED/TPC'= ", Font_6x8, White);
+				ssd1306_DrawRectangle(25, 37, 25, 63, 1);	// Draw main display rectangle
+				ssd1306_SetCursor(30, 50);
+				ssd1306_WriteString(last_led, Font_6x8, White);
+				if(cont_envio >= 34){
 					cont_envio = 0;
                     float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
-
 
                     //float to string
                     ftoa(temperature, tempString, 2);
 
-                    ssd1306_WriteString(tempString, Font_6x8, White);
                     mqtt_publish(cliente_mqtt, PUBLISH_STR_NAME, tempString, 5, 0, false, &mqtt_request_cb, NULL);
+					last_temp = tempString;
 				}
 			}
 		}

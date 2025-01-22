@@ -4,6 +4,7 @@
 #include "pico/cyw43_arch.h"
 #include "lwip/tcp.h"
 #include "lwip/apps/httpd.h"
+#include "mqtt_utility.h"
 
 #define LED_PIN 12          // Sets the LED pin
 #define BUTTON_A_PIN 5
@@ -64,10 +65,10 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
     // Checks if the request contains the command to turn on the LED.
     if (strstr(request, "GET /?led=on")) {
         current_request = "/?led=on";
-        gpio_put(LED_PIN, 1);  // Turn on the LED
+        pwm_set_gpio_level(LED_BLUE_PIN, 255);  // Acende o LED azul com brilho máximo
     } else if (strstr(request, " /?led=off")) {
         current_request = "/?led=off";
-        gpio_put(LED_PIN, 0);  // Turn off the LED
+        pwm_set_gpio_level(LED_BLUE_PIN, 255);  // Acende o LED azul com brilho máximo
     } else
         current_request = "none";
 
