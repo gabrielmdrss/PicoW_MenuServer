@@ -46,6 +46,11 @@
         "menu.h": "c",
         "i2c.h": "c",
         "cyw43_arch.h": "c",
-        "pwm.h": "c"
+        "pwm.h": "c",
+        "mqtt_utility.h": "c",
+        "clocks.h": "c",
+        "ctype.h": "c",
+        "icons.h": "c",
+        "mqtt.h": "c"
     }
 }

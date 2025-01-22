@@ -47,11 +47,13 @@ pico_set_program_version(ssd1306_i2c "0.1")
 
 # pull in common dependencies and additional i2c hardware support
 target_link_libraries(ssd1306_i2c 
-        pico_stdlib 
+        pico_stdlib
+        tinyusb_board 
         hardware_i2c 
         hardware_adc 
         hardware_pwm
         pico_cyw43_arch_lwip_threadsafe_background
+        pico_lwip_mqtt
         )
 
 pico_enable_stdio_usb(ssd1306_i2c 1)

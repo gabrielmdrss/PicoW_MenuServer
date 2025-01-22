@@ -13,8 +13,10 @@
 #include "hardware/clocks.h"
 #include "ssd1306/ssd1306_fonts.h"
 #include "ssd1306/ssd1306.h"
-#include "icons.h"
 #include "wifi.h"
+#include "lwip/apps/mqtt.h"
+#include "icons.h"
+#include "mqtt_utility.h"
 
 
 // ---------------------------- Button Definitions ----------------------------
@@ -36,6 +38,12 @@
 float frequency = MIN_FREQUENCY;
 int Limit_Buzzer = 0;
 uint8_t x_distance;
+
+//-------------------------------MQTT Variables---------------------------------
+
+ip_addr_t addr;
+mqtt_client_t *cliente_mqtt;
+int connected_mqtt;
 
 // --------------------------- Low Pass Filter Function ---------------------------
 
@@ -140,6 +148,11 @@ void menu_exit_sound(uint pin) {
     pwm_set_gpio_level(pin, 0); // Desativa o buzzer
 }
 
+void scape_function(void){
+	ssd1306_UpdateScreen();
+	sleep_ms(2000);
+	current_screen = !current_screen;
+}
 
 // ---------------------------- Home Screen Rendering Function ----------------------------
 
@@ -262,9 +275,7 @@ void menu(void) {
 				if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASS, CYW43_AUTH_WPA2_AES_PSK, 10000)){
 				ssd1306_SetCursor(18, 50);
 				ssd1306_WriteString("NOT CONNECTED", Font_7x10, 1);
-				ssd1306_UpdateScreen();
-				sleep_ms(2000);
-				current_screen = !current_screen;
+				scape_function();
 					return;
 				}
 
@@ -309,12 +320,71 @@ void menu(void) {
 			cyw43_arch_poll();  // Required to keep Wi-Fi active
 		} 
 
-		// LED Matrix OPTION
+		// MQTT Connection OPTION
 		else if (item_selected == 1){
 			// External function for using and sampling gyroscope functionality
-			ssd1306_SetCursor(5, 30);
-			ssd1306_WriteString("MATRIX", Font_11x18, White);
+			ssd1306_SetCursor(10, 1);
+			ssd1306_WriteString("MQTT Connection: ", Font_7x10, 1);
+			ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Draw header rectangle
+			ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Draw main display rectangle
 
+			if(!start_wifi){
+
+				ssd1306_SetCursor(15, 38);
+				ssd1306_WriteString("CONNECT TO WIFI!!", Font_6x8, 1);
+				scape_function();
+
+			} else {
+
+				if(!connected_mqtt){
+
+				ssd1306_SetCursor(10, 20);
+				ssd1306_WriteString("CONNECTING TO BROKER!!", Font_6x8, 1);
+				ssd1306_UpdateScreen();
+				
+				if (!ip4addr_aton(MQTT_SERVER, &addr)) {
+					ssd1306_SetCursor(20, 38);
+					ssd1306_WriteString("IP ERROR!!", Font_6x8, 1);
+					scape_function();
+				}
+
+				cliente_mqtt = mqtt_client_new();
+				mqtt_set_inpub_callback(cliente_mqtt, &mqtt_incoming_publish_cb, &mqtt_incoming_data_cb, NULL);
+				err_t erro = mqtt_client_connect(cliente_mqtt, &addr, 1883, &mqtt_connection_cb, NULL, &mqtt_client_info);
+
+				connected_mqtt = 1;
+
+				if (erro != ERR_OK) {
+					ssd1306_SetCursor(15, 38);
+					ssd1306_WriteString("CONNECTION ERROR!!", Font_6x8, 1);
+					scape_function();
+				}
+
+				ssd1306_SetCursor(30, 50);
+				ssd1306_WriteString("CONNECTED", Font_7x10, 1);
+				ssd1306_UpdateScreen();
+				sleep_ms(2000);
+				//connected_mqtt = 1;
+
+				}
+				
+				cont_envio++;
+				sleep_ms(1);
+
+				ssd1306_SetCursor(5, 20);
+                ssd1306_WriteString("PUB topic testy/temp = ", Font_6x8, White);
+				if(cont_envio >= 1000){
+					cont_envio = 0;
+                    float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
+
+
+                    //float to string
+                    ftoa(temperature, tempString, 2);
+
+                    ssd1306_WriteString(tempString, Font_6x8, White);
+                    mqtt_publish(cliente_mqtt, PUBLISH_STR_NAME, tempString, 5, 0, false, &mqtt_request_cb, NULL);
+				}
+			}
 		}
 		
 		// BUZZER OPTION

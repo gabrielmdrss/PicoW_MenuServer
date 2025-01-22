@@ -24,6 +24,8 @@ int main() {
     gpio_pull_up(BUTTON_B);
 
     adc_init();
+    adc_set_temp_sensor_enabled(true);
+    adc_select_input(4);
     adc_gpio_init(26);
     adc_gpio_init(27);
     pwm_init_buzzer(BUZZER_PIN); // Inicializa o PWM para o buzzer

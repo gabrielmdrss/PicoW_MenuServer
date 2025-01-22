@@ -150,7 +150,7 @@ const unsigned char bitmap_item_sel_outline [] = {
  */
 char menu_items [NUM_ITEMS] [MAX_ITEM_LENGTH] = {  // array with item names
   {"Wifi"},
-  {"LED matrix"},
+  {"MQTT"},
   {"Buzzer"},
   {"Calibration"}
  };
