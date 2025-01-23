@@ -5,8 +5,7 @@
  */
 
 #include <stdio.h>
-#include "menu.h"
-#include "wifi.h"
+#include "menu/menu.h"
 
 int main() {
 

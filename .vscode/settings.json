@@ -51,6 +51,7 @@
         "clocks.h": "c",
         "ctype.h": "c",
         "icons.h": "c",
-        "mqtt.h": "c"
+        "mqtt.h": "c",
+        "adc.h": "c"
     }
 }

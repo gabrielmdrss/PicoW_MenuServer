@@ -14,10 +14,10 @@
 #include "hardware/clocks.h"
 #include "ssd1306/ssd1306_fonts.h"
 #include "ssd1306/ssd1306.h"
-#include "wifi.h"
+#include "connectivity/wifi.h"
+#include "connectivity/mqtt_utility.h"
 #include "lwip/apps/mqtt.h"
 #include "icons.h"
-#include "mqtt_utility.h"
 
 
 // ---------------------------- Button Definitions ----------------------------

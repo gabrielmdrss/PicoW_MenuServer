@@ -68,7 +68,7 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
         pwm_set_gpio_level(LED_BLUE_PIN, 255);  // Acende o LED azul com brilho máximo
     } else if (strstr(request, " /?led=off")) {
         current_request = "/?led=off";
-        pwm_set_gpio_level(LED_BLUE_PIN, 255);  // Acende o LED azul com brilho máximo
+        pwm_set_gpio_level(LED_BLUE_PIN, 0);  // Acende o LED azul com brilho máximo
     } else
         current_request = "none";
 
