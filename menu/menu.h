@@ -47,7 +47,12 @@ mqtt_client_t *cliente_mqtt;
 int connected_mqtt;
 char *last_temp;
 
-// --------------------------- Low Pass Filter Function ---------------------------
+//------------------------------AP MODE Variables-------------------------------
+
+char *ap_name = "PICO_W_AP";
+char *ap_pw = "raspberry";
+
+// -------------------------- Low Pass Filter Function --------------------------
 
 /**
  * @brief Applies a low-pass filter to smooth input data.
@@ -67,7 +72,7 @@ uint low_pass_filter(uint new_value) {
     return filtered_value;
 }
 
-// ------------------------------- Buzzer Functions -------------------------------
+// ------------------------------ Buzzer Functions ------------------------------
 
 // Inicializa o PWM para o buzzer
 void pwm_init_buzzer(uint pin) {
@@ -241,6 +246,34 @@ void update_cursor(void){
 	}
 }
 
+int teste (void){
+
+	struct tcp_pcb *pcb = tcp_new();
+	if (!pcb) {
+		printf("Erro: Falha ao criar PCB TCP\n");
+		return -1;
+	}
+
+	// Configura o endereço IP para bind (endereço local)
+	ip_addr_t local_ip = *IP4_ADDR_ANY; // Usar qualquer endereço disponível
+	u16_t port = 80;
+
+	// Verifica se a porta está em uso
+	printf("Tentando vincular a porta %d...\n", port);
+	err_t bind_err = tcp_bind(pcb, &local_ip, port);
+
+	if (bind_err == ERR_USE) {
+		printf("Erro: Porta %d já está em uso\n", port);
+		return -1;
+	} else if (bind_err != ERR_OK) {
+		printf("Erro: tcp_bind falhou com código de erro %d\n", bind_err);
+		return -1;
+	}
+
+	printf("Porta vinculada com sucesso!\n");
+	return 0;
+}
+
 void menu(void) {
 
 	if (current_screen == 0) {
@@ -267,31 +300,8 @@ void menu(void) {
 
 			if(!start_wifi){
 
-				// Writing de name of the WI-FI SSID
-				ssd1306_SetCursor(7, 25);
-				ssd1306_WriteString("Connecting in: ", Font_6x8, White);
-				ssd1306_SetCursor(7, 39);
-				ssd1306_WriteString(WIFI_SSID, Font_6x8, 1);
-
-				ssd1306_UpdateScreen();
-				if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASS, CYW43_AUTH_WPA2_AES_PSK, 10000)){
-				ssd1306_SetCursor(18, 50);
-				ssd1306_WriteString("NOT CONNECTED", Font_7x10, 1);
-				scape_function();
-					return;
-				}
-
-				uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
-				//printf("Endereço IP %d.%d.%d.%d\n", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-
-				start_wifi = 1;
-				ssd1306_SetCursor(30, 50);
-				ssd1306_WriteString("CONNECTED", Font_7x10, 1);
-				ssd1306_UpdateScreen();
-				sleep_ms(2000);
-
-				// Start the HTTP server
-				start_http_server();
+			start_http_server();
+			start_wifi = 1;
 
 			} else {
 
@@ -330,7 +340,7 @@ void menu(void) {
 			ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Draw header rectangle
 			ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Draw main display rectangle
 
-			if(!start_wifi){
+			if(0  /*!start_wifi*/){
 
 				ssd1306_SetCursor(15, 38);
 				ssd1306_WriteString("CONNECT TO WIFI!!", Font_6x8, 1);
@@ -477,4 +487,22 @@ void menu(void) {
     ssd1306_UpdateScreen();
 }
 
+void menu_ap (void){
+
+	char buffer_sg[7];
+	ssd1306_SetCursor(40, 1);
+	ssd1306_WriteString("AP-MODE", Font_7x10, White);
+	ssd1306_FillRectangle(1, 15, 128, 16, White);
+	ssd1306_DrawRectangle(1, 20, 127, 63, White);
+	ssd1306_SetCursor(4, 22);
+	ssd1306_WriteString("ssid: ", Font_6x8, White);
+	ssd1306_WriteString(ap_name, Font_6x8, White);
+	ssd1306_SetCursor(4, 33);
+	ssd1306_WriteString("pw: ", Font_6x8, White);
+	ssd1306_WriteString(ap_pw, Font_6x8, White);
+	ssd1306_SetCursor(4, 44);
+	ssd1306_WriteString("192.168.4.1", Font_6x8, White);
+	ssd1306_UpdateScreen();
+
+}
 #endif /*MENU_H*/

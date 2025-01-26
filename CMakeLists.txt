@@ -39,6 +39,8 @@ add_executable(ssd1306_i2c
         main.c
         ssd1306/ssd1306.c
         ssd1306/ssd1306_fonts.c
+        ap_mode/dhcpserver/dhcpserver.c
+        ap_mode/dnsserver/dnsserver.c
         )
 
 pico_set_program_name(ssd1306_i2c "ssd1306_i2c")
@@ -61,6 +63,9 @@ pico_enable_stdio_uart(ssd1306_i2c 0)
 
 target_include_directories(ssd1306_i2c PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/ap_mode
+    ${CMAKE_CURRENT_LIST_DIR}/ap_mode/dhcpserver
+    ${CMAKE_CURRENT_LIST_DIR}/ap_mode/dnsserver
     ${PICO_SDK_PATH}/lib/lwip/src/include  # Diretório base do lwIP
     ${CMAKE_CURRENT_LIST_DIR}/path/to/lwipopts  # Se você tiver uma cópia local de lwipopts.h
 )
