@@ -118,6 +118,14 @@ static err_t connection_callback(void *arg, struct tcp_pcb *newpcb, err_t err) {
     return ERR_OK;
 }
 
+void shutdown_tcp_server(TCP_SERVER_T *server_state) {
+    if (server_state) {
+        tcp_server_close(server_state);
+        free(server_state);
+    }
+    DEBUG_printf("Servidor TCP encerrado e porta 80 liberada.\n");
+}
+
 // TCP Server Setup Function
 static void start_http_server(void) {
 

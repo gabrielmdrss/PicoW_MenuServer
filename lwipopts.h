@@ -87,4 +87,19 @@
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
+// Reduzir tempo de TIME-WAIT
+#define TCP_MSL 1000
+
+// Ajustar conexões TCP e buffers
+#define MEMP_NUM_TCP_PCB 16
+#define TCP_TTL 64
+
+// Configurações de Keep-Alive
+#define TCP_KEEPIDLE  1000
+#define TCP_KEEPINTVL 1000
+#define TCP_KEEPCNT      3
+
+// Depuração para TCP
+#define TCP_DEBUG LWIP_DBG_ON
+
 #endif /* __LWIPOPTS_H__ */

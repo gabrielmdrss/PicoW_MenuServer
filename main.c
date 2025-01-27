@@ -92,10 +92,18 @@ int main() {
                 // Finalize os serviços de rede relacionados ao servidor TCP
                 dns_server_deinit(&dns_server);
                 dhcp_server_deinit(&dhcp_server);
-                tcp_bind(NULL, IP_ADDR_ANY, 80); // Força a liberação da porta 80
+
+                shutdown_tcp_server(state);
+
+                // if (state != NULL) {
+                //     tcp_server_close(state);
+                //     free(state);
+                //     state = NULL;
+                // }                  // Libera a memória alocada para o estado do servidor TCP
+
                 cyw43_arch_disable_ap_mode(); // Desabilita o modo AP
                 cyw43_arch_deinit();          // Libera recursos do Wi-Fi
-                sleep_ms(100);
+                sleep_ms(500);
 
                 // Reinitialize o Wi-Fi no modo STA
                 if (cyw43_arch_init()) {
@@ -121,8 +129,6 @@ int main() {
 
                 // Atualize flags para evitar reexecução da lógica
                 aux_connection = 0;
-                tcp_server_close(state);
-                free(state);                  // Libera a memória alocada para o estado do servidor TCP
 
             }
         }
