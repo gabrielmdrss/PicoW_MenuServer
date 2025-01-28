@@ -3,8 +3,8 @@
 
 /******************************************************************************
  * @file    wifi.h
- * @brief   Header file containing definitions and function prototypes for the
- *          application.
+ * @brief   File containing definitions and function prototypes for the
+ *          Web Server application hosted on the Raspberry Pi Pico W.
  *
  * @authors Gabriel Domingos de Medeiros
  * @date    February 2025
