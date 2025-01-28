@@ -1,6 +1,20 @@
 #ifndef MQTT_UTILITY_H
 #define MQTT_UTILITY_H
 
+/******************************************************************************
+ * @file    mqtt_utility.h
+ * @brief   File containing definitions and function prototypes for the
+ *          application of  a MQTT communication connected to a local broker
+ *          on the Raspberry Pi Pico W.
+ *
+ * @authors Gabriel Domingos de Medeiros
+ * @date    February 2025
+ * @version 1.0.0
+ *
+ * @note    This file includes the necessary definitions, constants, and function
+ *          prototypes for the application.
+ ******************************************************************************/
+
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
