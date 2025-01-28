@@ -19,17 +19,31 @@
 #include "lwip/apps/httpd.h"      // Library of functions for HTTP protocol
 #include "mqtt_utility.h"         // File containing useful functions for MQTT communication
 
-#define LED_PIN 12          // Sets the LED pin
-#define BUTTON_A_PIN 5
+#define BUTTON_A_PIN 5            // sets the pin number used for detecting the state of Button A.
 
-char http_response[2048];  // Buffering for HTTP responsev
+char http_response[2048];         // The content of the HTTP response that will be sent to the client.
+
 const char *button_state = "Button is not pressioned";
 const char *last_state = "Button is not pressioned";
-int start_wifi = 0;
-int connected = 0;
-char * current_request = "none";
+int start_wifi = 0;              // Integer that acts as a flag to indicate if Wi-Fi initialization started.
+char * current_request = "none"; // This string holds the value of the current HTTP request being processed.
 
-// Buffering for HTTP responses
+/**
+ * @brief HTTP response template for the server.
+ *
+ * This define holds a preformatted HTTP response string, including headers and HTML content.
+ * It is dynamically populated with the current button state (`%s`) before being sent to the client.
+ *
+ * @details:
+ * - HTML/CSS styling for a simple web interface.
+ * - Includes buttons for LED ON and OFF functionality.
+ * - Displays the current button state dynamically in the response.
+ * - Auto-refresh feature for real-time updates.
+ *
+ * @example:
+ * When the button state is "Button is pressioned", the response dynamically updates
+ * to reflect the status in the `<p>` tag of the HTML content.
+ */
 #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nRefresh: 1\r\n\r\n" \
                       "<!DOCTYPE html><html>" \
                       "<head>" \
@@ -60,7 +74,37 @@ char * current_request = "none";
                       "</body></html>\r\n"
 
 
-// Callback function to process HTTP requests
+/* Functions */
+
+// --------------------------- Http Callback Function ---------------------------
+
+/**
+ * @brief Processes incoming HTTP requests and handles LED control commands.
+ *
+ * @param arg A pointer to user-defined data passed to the callback (unused).
+ * @param tpcb A pointer to the TCP Protocol Control Block (PCB) for the connection.
+ * @param p A pointer to the buffer containing the HTTP request payload.
+ * @param err The error status of the incoming data.
+ * @return err_t Returns `ERR_OK` on success or an appropriate error code.
+ *
+ * This function processes HTTP requests received by the server. It checks for specific
+ * commands in the request to control an LED (e.g., turning it ON or OFF). If a recognized
+ * command is found, the function updates the LED's state accordingly. The response is then
+ * generated dynamically based on the current button state and sent back to the client. 
+ * Finally, the received buffer is freed, and the TCP connection is maintained.
+ *
+ * ### Behavior:
+ * - If the client closes the connection (`p == NULL`), the server closes the TCP connection.
+ * - Recognizes the following HTTP commands:
+ *   - `"GET /?led=on"`: Turns the LED on with maximum brightness.
+ *   - `"GET /?led=off"`: Turns the LED off.
+ * - Replaces the `%s` placeholder in the HTTP response template with the current button state.
+ * - Sends the generated HTTP response back to the client.
+ *
+ * @note This function is invoked automatically when new data is received by the server
+ *   (callback registered in `connection_callback`).
+ * @note Ensures proper memory management by freeing the received buffer after processing.
+ */
 static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     
     // Checks if the connection was closed by the client
@@ -95,40 +139,56 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
     return ERR_OK;
 }
 
-static err_t update_server(void *arg, struct tcp_pcb *tpcb){
-    
-    if (!gpio_get(BUTTON_A_PIN))
-        button_state = "1";
-        //button_state = "Button is pressioned"; 
-    else
-        button_state = "0";
-        //button_state = "Button is not pressioned"; 
 
-    // Replace %s in HTTP_RESPONSE
-    snprintf(http_response, sizeof(http_response), HTTP_RESPONSE, button_state);
+// --------------------------- Connection Callback Function ---------------------------
 
-    // Send the answer
-    err_t write_err = tcp_write(tpcb, http_response, strlen(http_response), TCP_WRITE_FLAG_COPY);
-    if (write_err != ERR_OK) {
-        printf("Error sending HTTP response: %d\n", write_err);
-        return write_err;
-    }
-
-    tcp_output(tpcb);  // Make sure data is sent
-
-    // Close the connection
-    tcp_close(tpcb);
-
-    return ERR_OK;
-}
-
-// Connection callback: associates the http_callback with the connection
+/**
+ * @brief Handles new incoming TCP connections and sets up the HTTP callback.
+ *
+ * @param arg A pointer to user-defined data passed to the callback (unused).
+ * @param newpcb A pointer to the new TCP Protocol Control Block (PCB) representing the connection.
+ * @param err The error status of the incoming connection.
+ * @return err_t Returns `ERR_OK` on success or an appropriate error code.
+ *
+ * This function is triggered whenever a new TCP connection is established with the server.
+ * It associates the `http_callback` function to handle incoming data for the connection.
+ * Optionally, it can register a polling function (e.g., `update_server`) for periodic server updates.
+ *
+ * ### Behavior:
+ * - Registers the `http_callback` function to handle incoming HTTP requests on the connection.
+ * - Optionally supports polling by enabling the `tcp_poll` function (commented in the code).
+ * - Does not manage connection closing or cleanup directly; this is handled by other mechanisms.
+ *
+ * ### Notes:
+ * @note The callback function `http_callback` is invoked when new data is received for the connection.
+ * @note This function is designed to work in conjunction with the lwIP TCP/IP stack.
+ */
 static err_t connection_callback(void *arg, struct tcp_pcb *newpcb, err_t err) {
     tcp_recv(newpcb, http_callback);  // Associates the HTTP callback
     //tcp_poll(newpcb, update_server, 100);
     return ERR_OK;
 }
 
+
+// --------------------------- Shutdown TCP Server Function ---------------------------
+
+/**
+ * @brief Shuts down the TCP server and releases resources.
+ *
+ * @param server_state A pointer to the `TCP_SERVER_T` structure representing the server state.
+ *
+ * This function gracefully shuts down the TCP server by closing all active connections,
+ * releasing the occupied port, and freeing any dynamically allocated memory associated
+ * with the server state.
+ *
+ * ### Behavior:
+ * - Closes all active connections by invoking `tcp_server_close`.
+ * - Frees the memory allocated for the `TCP_SERVER_T` structure.
+ * - Prints a debug message indicating the server has been shut down and the port is released.
+ *
+ * @note Ensure that no ongoing operations depend on the server state before invoking this function.
+ * @note The server state should be properly initialized before calling this function.
+ */
 void shutdown_tcp_server(TCP_SERVER_T *server_state) {
     if (server_state) {
         tcp_server_close(server_state);
@@ -137,7 +197,28 @@ void shutdown_tcp_server(TCP_SERVER_T *server_state) {
     DEBUG_printf("Servidor TCP encerrado e porta 80 liberada.\n");
 }
 
-// TCP Server Setup Function
+
+// --------------------------- TCP Server Setup Function ---------------------------
+
+/**
+ * @brief Initializes and starts the HTTP server on port 80.
+ *
+ * This function sets up the TCP server by creating a Protocol Control Block (PCB),
+ * binding it to port 80, and putting it in listening mode. It also associates the
+ * `connection_callback` function to handle incoming client connections.
+ *
+ * ### Behavior:
+ * - Creates a new TCP PCB using `tcp_new`.
+ * - Binds the server to port 80 on all available network interfaces.
+ * - Puts the PCB in listening mode to accept incoming connections.
+ * - Associates the `connection_callback` function to manage new client connections.
+ * - Prints status messages indicating success or errors during setup.
+ *
+ *
+ * @note If PCB creation or port binding fails, the function prints an error message
+ *   and exits without completing the server setup.
+ * @note This function is designed for use with the lwIP TCP/IP stack.
+ */
 static void start_http_server(void) {
 
     // Creating a new TCP Protocol Control Structure (PCB)
