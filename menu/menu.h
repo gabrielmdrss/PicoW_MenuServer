@@ -28,17 +28,19 @@
 #define BUTTON_A 5  ///< Button for changing options/settings.
 #define BUTTON_B 6   ///< Button for confirming/entering a selection.
 
+
 //-----------------------------Buzzer Definitions-------------------------------
 
-#define BUZZER_PIN 21    // Pino do buzzer
-#define MIN_FREQUENCY 10 // Frequência mínima do buzzer (Hz)
-#define MAX_FREQUENCY 2000 // Frequência máxima do buzzer (Hz)
-#define ADC_UPPER_THRESHOLD 3500 // Limite superior do ADC para incrementar a frequência
-#define ADC_LOWER_THRESHOLD 850  // Limite inferior do ADC para decrementar a frequência
-#define STEP 20              // Incremento ou decremento por iteração
+#define BUZZER_PIN 21    			// Pino do buzzer
+#define MIN_FREQUENCY 10 			// Frequência mínima do buzzer (Hz)
+#define MAX_FREQUENCY 2000 			// Frequência máxima do buzzer (Hz)
+#define ADC_UPPER_THRESHOLD 3500 	// Limite superior do ADC para incrementar a frequência
+#define ADC_LOWER_THRESHOLD 850  	// Limite inferior do ADC para decrementar a frequência
+#define STEP 20              		// Incremento ou decremento por iteração
 float frequency = MIN_FREQUENCY;
 int Limit_Buzzer = 0;
 uint8_t x_distance;
+
 
 //-------------------------------MQTT Variables---------------------------------
 
@@ -47,10 +49,12 @@ mqtt_client_t *cliente_mqtt;
 int connected_mqtt;
 char *last_temp;
 
+
 //------------------------------AP MODE Variables-------------------------------
 
 char *ap_name = "PICO_W_AP";
 char *ap_pw = "raspberry";
+
 
 // -------------------------- Low Pass Filter Function --------------------------
 
@@ -72,32 +76,97 @@ uint low_pass_filter(uint new_value) {
     return filtered_value;
 }
 
+
 // ------------------------------ Buzzer Functions ------------------------------
 
-// Inicializa o PWM para o buzzer
+/**
+ * @brief Initializes the PWM for the buzzer.
+ *
+ * This function sets up the PWM configuration for the buzzer connected to the specified GPIO pin.
+ * It configures the GPIO pin for PWM functionality, initializes the PWM slice, and sets the initial
+ * PWM level to low.
+ *
+ * @param pin The GPIO pin connected to the buzzer.
+ *
+ * @note The function performs the following operations:
+ * - Configures the GPIO pin for PWM functionality.
+ * - Retrieves the PWM slice number for the specified GPIO pin.
+ * - Sets the default PWM configuration.
+ * - Initializes the PWM slice with the configuration.
+ * - Sets the initial PWM level to low.
+ *
+ * @note The function relies on the following:
+ *   - `gpio_set_function(pin, GPIO_FUNC_PWM)`: Configures the GPIO pin for PWM functionality.
+ *   - `pwm_gpio_to_slice_num(pin)`: Retrieves the PWM slice number for the specified GPIO pin.
+ *   - `pwm_get_default_config()`: Retrieves the default PWM configuration.
+ *   - `pwm_config_set_clkdiv(&config, divisor)`: Sets the clock divisor for the PWM configuration.
+ *   - `pwm_init(slice_num, &config, true)`: Initializes the PWM slice with the configuration.
+ *   - `pwm_set_gpio_level(pin, level)`: Sets the PWM level for the specified GPIO pin.
+ */
 void pwm_init_buzzer(uint pin) {
     gpio_set_function(pin, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(pin);
     pwm_config config = pwm_get_default_config();
-    pwm_config_set_clkdiv(&config, 1.0f); // Divisor inicial
+    pwm_config_set_clkdiv(&config, 1.0f); // Initial divisor
     pwm_init(slice_num, &config, true);
-    pwm_set_gpio_level(pin, 0); // Inicia com nível baixo
+    pwm_set_gpio_level(pin, 0); // Starts with low level
 }
 
-// Define a frequência do buzzer
+
+/**
+ * @brief Sets the frequency of the buzzer.
+ *
+ * This function configures the PWM settings to generate a specific frequency
+ * on the buzzer connected to the specified GPIO pin. It calculates the appropriate
+ * clock divisor and top value for the PWM based on the desired frequency.
+ *
+ * @param pin The GPIO pin connected to the buzzer.
+ * @param frequency The desired frequency for the buzzer in Hertz.
+ *
+ * @note The function performs the following operations:
+ * - Calculates the clock divisor and top value for the PWM based on the desired frequency.
+ * - Configures the PWM settings with the calculated values.
+ * - Sets the PWM duty cycle to 50% to generate the tone.
+ *
+ * @note The function relies on the following:
+ *   - `clock_get_hz(clk_sys)`: Retrieves the system clock frequency.
+ *   - `pwm_gpio_to_slice_num(pin)`: Retrieves the PWM slice number for the specified GPIO pin.
+ *   - `pwm_set_clkdiv(slice_num, divisor)`: Sets the clock divisor for the PWM slice.
+ *   - `pwm_set_wrap(slice_num, top)`: Sets the top value for the PWM slice.
+ *   - `pwm_set_gpio_level(pin, level)`: Sets the PWM duty cycle for the specified GPIO pin.
+ */
 void set_buzzer_frequency(uint pin, float frequency) {
     uint slice_num = pwm_gpio_to_slice_num(pin);
 
-    // Calcula o valor de "top" e ajusta o divisor
+    // Calculates the value of "top" and adjusts the divisor
     uint32_t source_hz = clock_get_hz(clk_sys);
     float divisor = (float)source_hz / (frequency * 4096.0f);
     uint32_t top = source_hz / (frequency * divisor);
 
-    pwm_set_clkdiv(slice_num, divisor); // Configura o divisor
-    pwm_set_wrap(slice_num, top - 1);  // Configura o contador superior
-    pwm_set_gpio_level(pin, top / 2);  // Duty cycle de 50%
+    pwm_set_clkdiv(slice_num, divisor); // Set the divider
+    pwm_set_wrap(slice_num, top - 1);  // Sets the upper counter
+    pwm_set_gpio_level(pin, top / 2);  // 50% duty cycle
 }
 
+
+/**
+ * @brief Plays a sound sequence when entering the menu.
+ *
+ * This function generates a sequence of tones using a buzzer to indicate
+ * that the menu is being entered. The tones vary based on the current frequency
+ * and can be rising, falling, or a combination of both.
+ *
+ * @param pin The GPIO pin connected to the buzzer.
+ *
+ * @note The function performs the following operations:
+ * - Determines the sequence of frequencies based on the current frequency.
+ * - Sets the buzzer frequency and activates the buzzer for each tone in the sequence.
+ * - Introduces a delay between each tone.
+ * - Deactivates the buzzer after the sequence is complete.
+ *
+ * @note The function relies on the following external variables:
+ *   - `frequency`: The current frequency used to determine the tone sequence.
+ */
 void menu_enter_sound(uint pin) {
     
 	uint frequencies[3];
@@ -126,6 +195,25 @@ void menu_enter_sound(uint pin) {
     pwm_set_gpio_level(pin, 0); // Desativa o buzzer
 }
 
+
+/**
+ * @brief Plays a sound sequence when exiting the menu.
+ *
+ * This function generates a sequence of tones using a buzzer to indicate
+ * that the menu is being exited. The tones vary based on the current frequency
+ * and can be rising, falling, or a combination of both.
+ *
+ * @param pin The GPIO pin connected to the buzzer.
+ *
+ * @note The function performs the following operations:
+ * - Determines the sequence of frequencies based on the current frequency.
+ * - Sets the buzzer frequency and activates the buzzer for each tone in the sequence.
+ * - Introduces a delay between each tone.
+ * - Deactivates the buzzer after the sequence is complete.
+ *
+ * @note The function relies on the following external variables:
+ *   - `frequency`: The current frequency used to determine the tone sequence.
+ */
 void menu_exit_sound(uint pin) {
 
     // Frequências para o som de saída  
@@ -134,32 +222,46 @@ void menu_exit_sound(uint pin) {
     if (frequency <= 310) {
         frequencies[0] = 10;
         frequencies[1] = frequency + 200;
-        frequencies[2] = frequency + 100; // Tons crescentes
+        frequencies[2] = frequency + 100; // Rising tones
     } else if (frequency >= 1810) {
         frequencies[0] = frequency - 300;
         frequencies[1] = 2010;
-        frequencies[2] = 1910; // Tons decrescentes
+        frequencies[2] = 1910; // Falling tones
     } else {
         frequencies[0] = frequency - 300;
         frequencies[1] = frequency + 200;
-        frequencies[2] = frequency + 100; // Combinação de tons
+        frequencies[2] = frequency + 100; // Combination of tones
     }
 
-	uint duration_ms = 75; // Duração de cada tom
+	uint duration_ms = 75; // Duration of each tone
 
     for (int i = 0; i < 3; i++) {
-        set_buzzer_frequency(pin, frequencies[i]); // Configura o tom
-        pwm_set_gpio_level(pin, 2048);            // Ativa o buzzer
-        sleep_ms(duration_ms);                   // Duração do tom
+        set_buzzer_frequency(pin, frequencies[i]); // Sets the tone
+        pwm_set_gpio_level(pin, 2048);            // Activate the buzzer
+        sleep_ms(duration_ms);                   // Tone duration
     }
-    pwm_set_gpio_level(pin, 0); // Desativa o buzzer
+    pwm_set_gpio_level(pin, 0); // Disable the buzzer
 }
 
+
+// ---------------------------- Scape Function ----------------------------
+
+/**
+ * @brief Handles the escape functionality to the home_screen.
+ *
+ * This function updates the SSD1306 display, introduces a delay, and toggles
+ * the current screen state. It is typically used to provide visual feedback
+ * and transition between different menu screens.
+ *
+ * @note The function relies on the following external variables:
+ *   - `current_screen`: A flag indicating the current screen state.
+ */
 void scape_function(void){
 	ssd1306_UpdateScreen();
 	sleep_ms(2000);
 	current_screen = !current_screen;
 }
+
 
 // ---------------------------- Home Screen Rendering Function ----------------------------
 
@@ -171,16 +273,15 @@ void scape_function(void){
  * current, previous, and next menu items. It also includes a selection outline and
  * a scrollbar for visual navigation feedback.
  *
- * Functionality:
- * - Clears the display by setting all pixels to white.
+ * @note The function performs the following operations:
+ * - Clears the display by setting all pixels to black.
  * - Writes the names and icons of the previous, current, and next home screen items.
  * - Draws a rectangular outline to highlight the selected menu item.
  * - Renders a scrollbar on the right side of the display, indicating the current
  *   position in the menu.
  *
- * Dependencies:
- * - The function relies on the SSD1306 driver functions:
- *   - `ssd1306_Fill(0)`: Clears the display by setting all pixels to a specific color.
+ * @note The function relies on the SSD1306 driver functions:
+ *   - `ssd1306_Fill(Black)`: Clears the display by setting all pixels to black.
  *   - `ssd1306_SetCursor`: Positions the cursor at a specified (x, y) location on the display.
  *   - `ssd1306_WriteString`: Writes a string at a specified position (x, y).
  *   - `ssd1306_DrawBitmap`: Renders a bitmap image (icon) at a specified position (x, y).
@@ -190,34 +291,74 @@ void scape_function(void){
  *       with the corresponding strings and bitmap data for the home screen options.
  */
 void home_screen(void) {
-	ssd1306_Fill(Black);
-	ssd1306_SetCursor(25, 5);
-	ssd1306_WriteString(menu_items[item_sel_previous], Font_7x10, White);
-	ssd1306_DrawBitmap(4, 2, bitmap_icons[item_sel_previous], 16, 16, White);
-	ssd1306_SetCursor(25, 5 + 20 + 2);
-	ssd1306_WriteString(menu_items[item_selected], Font_7x10, White);
-	ssd1306_DrawBitmap(4, 24, bitmap_icons[item_selected], 16, 16, White);
-	ssd1306_SetCursor(25, 5 + 20 + 20 + 2 + 2);
-	ssd1306_WriteString(menu_items[item_sel_next], Font_7x10, White);
-	ssd1306_DrawBitmap(4, 46, bitmap_icons[item_sel_next], 16, 16, White);
+    // Clear the display
+    ssd1306_Fill(Black);
 
-	ssd1306_DrawBitmap(0, 22, bitmap_item_sel_outline, 128, 21, White);
-	ssd1306_DrawBitmap(128 - 8, 0, bitmap_scrollbar_background, 8, 64, White);
-	ssd1306_DrawRectangle(125, 64 / NUM_ITEMS * item_selected, 128,
-			(64 / NUM_ITEMS * item_selected + (64 / NUM_ITEMS)), White);
-	ssd1306_DrawRectangle(126, 64 / NUM_ITEMS * item_selected, 127,
-			(64 / NUM_ITEMS * item_selected + (64 / NUM_ITEMS)), White);
+    // Display the previous menu item
+    ssd1306_SetCursor(25, 5);
+    ssd1306_WriteString(menu_items[item_sel_previous], Font_7x10, White);
+    ssd1306_DrawBitmap(4, 2, bitmap_icons[item_sel_previous], 16, 16, White);
+
+    // Display the current menu item
+    ssd1306_SetCursor(25, 5 + 20 + 2);
+    ssd1306_WriteString(menu_items[item_selected], Font_7x10, White);
+    ssd1306_DrawBitmap(4, 24, bitmap_icons[item_selected], 16, 16, White);
+
+    // Display the next menu item
+    ssd1306_SetCursor(25, 5 + 20 + 20 + 2 + 2);
+    ssd1306_WriteString(menu_items[item_sel_next], Font_7x10, White);
+    ssd1306_DrawBitmap(4, 46, bitmap_icons[item_sel_next], 16, 16, White);
+
+    // Draw the selection outline
+    ssd1306_DrawBitmap(0, 22, bitmap_item_sel_outline, 128, 21, White);
+
+    // Draw the scrollbar background
+    ssd1306_DrawBitmap(128 - 8, 0, bitmap_scrollbar_background, 8, 64, White);
+
+    // Draw the scrollbar indicating the current position
+    ssd1306_DrawRectangle(125, 64 / NUM_ITEMS * item_selected, 128,
+            (64 / NUM_ITEMS * item_selected + (64 / NUM_ITEMS)), White);
+    ssd1306_DrawRectangle(126, 64 / NUM_ITEMS * item_selected, 127,
+            (64 / NUM_ITEMS * item_selected + (64 / NUM_ITEMS)), White);
 }
 
+
+// ---------------------------- Cursor Position Update Function ----------------------------
+
+/**
+ * @brief Updates the cursor position based on joystick input.
+ *
+ * This function reads the Y-axis value from an analog joystick and updates the cursor
+ * position in the menu accordingly. It uses a low-pass filter to smooth the joystick
+ * input and checks for specific thresholds to determine if the cursor should move up
+ * or down. The function also handles wrapping around the menu items when the cursor
+ * reaches the top or bottom.
+ *
+ * @note The function performs the following operations:
+ * - Reads the raw ADC value from the joystick's Y-axis.
+ * - Applies a low-pass filter to the raw ADC value.
+ * - Checks if the joystick is moved up or down based on filtered ADC thresholds.
+ * - Updates the cursor position and selected menu item index.
+ * - Handles wrapping around the cursor and menu item index when reaching the limits.
+ *
+ * @note The function relies on the following external variables:
+ *   - `up_clicked`: A flag indicating if the joystick up movement is detected.
+ *   - `down_clicked`: A flag indicating if the joystick down movement is detected.
+ *   - `cursor`: The current cursor position in the menu.
+ *   - `item_selected`: The index of the currently selected menu item.
+ *   - `NUM_ITEMS`: The total number of menu items.
+ *
+ * @note The function assumes that the ADC is properly initialized and configured.
+ */
 void update_cursor(void){
 
 	adc_select_input(0);
 	uint adc_y_raw = adc_read();
 	uint filtered_read = low_pass_filter(adc_y_raw);
 
-	// Verificar estado do analógico-UP
+	// Check the state of joystick-UP
 	if ((filtered_read > 3000) && up_clicked == 0) {
-		up_clicked = 1; // Marcar como pressionado
+		up_clicked = 1; // Mark as pressed
 		cursor--;
 		if (cursor == -1)
 			cursor = 3;
@@ -225,14 +366,14 @@ void update_cursor(void){
 		if (item_selected < 0)
 			item_selected = NUM_ITEMS - 1;
 	}
-	// Liberar o botão UP
+	// Release the UP button
 	if (filtered_read <= 3000) {
 		up_clicked = 0;
 	}
 
-	// Verificar estado do analógico-DOWN
+	// Check the state of joystick-DOWN
 	if ((filtered_read < 1100) && down_clicked == 0) {
-		down_clicked = 1; // Marcar como pressionado
+		down_clicked = 1; // Mark as pressed
 		cursor++;
 		if (cursor == 4)
 			cursor = 0;
@@ -240,47 +381,46 @@ void update_cursor(void){
 		if (item_selected >= NUM_ITEMS)
 			item_selected = 0;
 	}
-	// Liberar o botão DOWN
+	// Release the DOWN button
 	if (filtered_read >= 1100) {
 		down_clicked = 0;
 	}
 }
 
-int teste (void){
 
-	struct tcp_pcb *pcb = tcp_new();
-	if (!pcb) {
-		printf("Erro: Falha ao criar PCB TCP\n");
-		return -1;
-	}
+// ---------------------------- Menu Rendering Function ----------------------------
 
-	// Configura o endereço IP para bind (endereço local)
-	ip_addr_t local_ip = *IP4_ADDR_ANY; // Usar qualquer endereço disponível
-	u16_t port = 80;
-
-	// Verifica se a porta está em uso
-	printf("Tentando vincular a porta %d...\n", port);
-	err_t bind_err = tcp_bind(pcb, &local_ip, port);
-
-	if (bind_err == ERR_USE) {
-		printf("Erro: Porta %d já está em uso\n", port);
-		return -1;
-	} else if (bind_err != ERR_OK) {
-		printf("Erro: tcp_bind falhou com código de erro %d\n", bind_err);
-		return -1;
-	}
-
-	printf("Porta vinculada com sucesso!\n");
-	return 0;
-}
-
+/**
+ * @brief Renders the menu on an SSD1306 display.
+ *
+ * This function is responsible for drawing a home screen interface on an SSD1306 display
+ * using the I2C protocol. It displays icons and corresponding option names for the
+ * current, previous, and next menu items. It also includes a selection outline and
+ * a scrollbar for visual navigation feedback.
+ *
+ * @note The function performs the following operations:
+ * - Clears the display by setting all pixels to white.
+ * - Writes the names and icons of the previous, current, and next home screen items.
+ * - Draws a rectangular outline to highlight the selected menu item.
+ * - Renders a scrollbar on the right side of the display, indicating the current
+ *   position in the menu.
+ *
+ * @note The function relies on the SSD1306 driver functions:
+ *   - `ssd1306_Fill(0)`: Clears the display by setting all pixels to a specific color.
+ *   - `ssd1306_SetCursor`: Positions the cursor at a specified (x, y) location on the display.
+ *   - `ssd1306_WriteString`: Writes a string at a specified position (x, y).
+ *   - `ssd1306_DrawBitmap`: Renders a bitmap image (icon) at a specified position (x, y).
+ *   - `ssd1306_DrawRectangle`: Draws a rectangle at the specified coordinates.
+ *
+ * @note Assumes that `menu_items` and `bitmap_icons` arrays are defined and populated
+ *       with the corresponding strings and bitmap data for the home screen options.
+ */
 void menu(void) {
 
 	if (current_screen == 0) {
 
-        update_cursor();    // Atualizar cursor com o joystick
-        home_screen();      // Atualizar tela inicial no diplay OLED
-
+        update_cursor();    // Update cursor with joystick
+        home_screen();      // Update Home Screen on OLED Display
 	}
 
 	if(current_screen) {
@@ -471,7 +611,7 @@ void menu(void) {
 		button_enter_clicked = 0;
 	}
 
-/*---------------------- Lógica para imprimir os itens corretos -------------------------*/
+/*------------------------- Logic to print the correct items ----------------------------*/
 
 	item_sel_previous = item_selected - 1;
 	if (item_sel_previous < 0) {

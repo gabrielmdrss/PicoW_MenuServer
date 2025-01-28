@@ -14,19 +14,17 @@
  *          prototypes for the application.
  ******************************************************************************/
 
+// ---------------------------------- Includes ---------------------------------
+
 #include "pico/cyw43_arch.h"      // Library for using the connectivity module for raspberry pi pico w.
 #include "lwip/tcp.h"             // TCP Function Library
 #include "lwip/apps/httpd.h"      // Library of functions for HTTP protocol
 #include "mqtt_utility.h"         // File containing useful functions for MQTT communication
 
-#define BUTTON_A_PIN 5            // sets the pin number used for detecting the state of Button A.
 
-char http_response[2048];         // The content of the HTTP response that will be sent to the client.
+// ----------------------------------- Defines ----------------------------------
 
-const char *button_state = "Button is not pressioned";
-const char *last_state = "Button is not pressioned";
-int start_wifi = 0;              // Integer that acts as a flag to indicate if Wi-Fi initialization started.
-char * current_request = "none"; // This string holds the value of the current HTTP request being processed.
+#define BUTTON_A_PIN 5            // Pin number used in Button A.
 
 /**
  * @brief HTTP response template for the server.
@@ -74,7 +72,15 @@ char * current_request = "none"; // This string holds the value of the current H
                       "</body></html>\r\n"
 
 
-/* Functions */
+// ---------------------------------- Variables ---------------------------------
+
+char http_response[2048];         // The content of the HTTP response that will be sent to the client.
+const char *button_state = "Button is not pressioned"; // String that holds the current state of the button.
+int start_wifi = 0;              // Integer that acts as a flag to indicate if Wi-Fi initialization started.
+char * current_request = "none"; // This string holds the value of the current HTTP request being processed.
+
+
+// ---------------------------------- Functions ---------------------------------
 
 // --------------------------- Http Callback Function ---------------------------
 
@@ -194,7 +200,7 @@ void shutdown_tcp_server(TCP_SERVER_T *server_state) {
         tcp_server_close(server_state);
         free(server_state);
     }
-    DEBUG_printf("Servidor TCP encerrado e porta 80 liberada.\n");
+    DEBUG_printf("TCP server closed and port 80 released.\n");
 }
 
 

@@ -2,18 +2,16 @@
 #define ICONS_H
 
 /******************************************************************************
- * @file    PNG.h
- * @brief   Header file containing definitions and arrays for the
+ * @file    icons.h
+ * @brief   File containing definitions and arrays for the
  *          menu visualization.
  *
- * @authors  Gabriel Domingos de Medeiros, Jezreal Pereira Filgueiras
- * @date    December 2024
+ * @authors  Gabriel Domingos de Medeiros
+ * @date    February 2025
  * @version 1.0.0
  *
  * @note    This file includes the necessary definitions and constants
  *          for the diplay ssd1306 visualization.
- *
- * @copyright (c) 2024 VIRTUS--CC. All rights reserved.
  ******************************************************************************/
 
 
@@ -34,7 +32,6 @@ int item_sel_previous;         ///< Previous item index, used to display the ite
 int item_sel_next;             ///< Next item index, used to display the item after the selected one.
 int current_screen = 0;        ///< Indicates the current screen index being displayed.
 int cursor = 0;                ///< Position of the cursor in the menu for navigation.
-int button_change_clicked = 0; // only perform action when CHANGE button is clicked, and wait until another press
 int button_enter_clicked = 0; // only perform action when ENTER button is clicked, and wait until another press
 int up_clicked = 0; // only perform action when button is clicked, and wait until another press
 int down_clicked = 0; // same as above
@@ -106,10 +103,10 @@ const unsigned char bitmap_scrollbar_background [] = {
  * screen displays within the application.
  */
 const unsigned char* bitmap_icons[4] = {
-  bitmap_icon_dashboard,    ///< Pointer to the dashboard icon.
-  bitmap_icon_parksensor,   ///< Pointer to the park sensor icon.
-  bitmap_icon_fireworks,    ///< Pointer to the fireworks icon.
-  bitmap_icon_battery       ///< Pointer to the battery icon.
+  bitmap_icon_dashboard,    // Pointer to the dashboard icon.
+  bitmap_icon_parksensor,   // Pointer to the park sensor icon.
+  bitmap_icon_fireworks,    // Pointer to the fireworks icon.
+  bitmap_icon_battery       // Pointer to the battery icon.
 };
 
 /**
