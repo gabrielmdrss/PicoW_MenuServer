@@ -1,15 +1,26 @@
 #ifndef WIFI_H
 #define WIFI_H
 
-#include "pico/cyw43_arch.h"
-#include "lwip/tcp.h"
-#include "lwip/apps/httpd.h"
-#include "mqtt_utility.h"
+/******************************************************************************
+ * @file    wifi.h
+ * @brief   Header file containing definitions and function prototypes for the
+ *          application.
+ *
+ * @authors Gabriel Domingos de Medeiros
+ * @date    February 2025
+ * @version 1.0.0
+ *
+ * @note    This file includes the necessary definitions, constants, and function
+ *          prototypes for the application.
+ ******************************************************************************/
+
+#include "pico/cyw43_arch.h"      // Library for using the connectivity module for raspberry pi pico w.
+#include "lwip/tcp.h"             // TCP Function Library
+#include "lwip/apps/httpd.h"      // Library of functions for HTTP protocol
+#include "mqtt_utility.h"         // File containing useful functions for MQTT communication
 
 #define LED_PIN 12          // Sets the LED pin
 #define BUTTON_A_PIN 5
-#define WIFI_SSID "PROXXIMA273348-2.4 G"  // Replace with the name of your Wi-Fi network
-#define WIFI_PASS "31230618" // Replace with your Wi-Fi network password
 
 char http_response[2048];  // Buffering for HTTP responsev
 const char *button_state = "Button is not pressioned";
