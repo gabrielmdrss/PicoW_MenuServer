@@ -66,14 +66,6 @@ int main() {
         return 1;
     }
 /*---------------------------------------------------------------------------------------*/
-    // // Starts HTTP Server
-    // if (cyw43_arch_init()) {
-    //     printf("Error initializing Wi-Fi\n");
-    //     return 1;
-    // }
-
-    // cyw43_arch_enable_sta_mode();
-    // printf("Connecting to Wi-Fi...\n");
 
     while (1)
     {
@@ -84,8 +76,8 @@ int main() {
         } else {
 
             menu_ap();
-            printf("id_pw_collected = %d,  aux_connection = %d\n", id_pw_collected, aux_connection);
-            sleep_ms(1000);
+            // printf("id_pw_collected = %d,  aux_connection = %d\n", id_pw_collected, aux_connection);
+            // sleep_ms(1000);
 
             if (id_pw_collected == 1 && aux_connection == 1) {
 
@@ -94,12 +86,6 @@ int main() {
                 dhcp_server_deinit(&dhcp_server);
 
                 shutdown_tcp_server(state);
-
-                // if (state != NULL) {
-                //     tcp_server_close(state);
-                //     free(state);
-                //     state = NULL;
-                // }                  // Libera a memória alocada para o estado do servidor TCP
 
                 cyw43_arch_disable_ap_mode(); // Desabilita o modo AP
                 cyw43_arch_deinit();          // Libera recursos do Wi-Fi
@@ -120,11 +106,17 @@ int main() {
                 replace_plus_with_space(ssid);
                 replace_plus_with_space(password);
 
-                if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 100000)) {
+                if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 20000)) {
                     printf("Erro: Falha ao conectar ao Wi-Fi.\n");
+                    ssd1306_SetCursor(21, 54);
+                    ssd1306_WriteString("NOT CONNECTED", Font_6x8, White);
+                    ssd1306_UpdateScreen();
                     return -1;
                 }
-
+                ssd1306_SetCursor(30, 54);
+                ssd1306_WriteString("CONNECTED", Font_6x8, White);
+                ssd1306_UpdateScreen();
+                sleep_ms(2000);
                 printf("Conectado a %s\n", ssid);
 
                 // Atualize flags para evitar reexecução da lógica
