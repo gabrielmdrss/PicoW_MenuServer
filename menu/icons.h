@@ -146,7 +146,7 @@ const unsigned char bitmap_item_sel_outline [] = {
  * screen displays within the application.
  */
 char menu_items [NUM_ITEMS] [MAX_ITEM_LENGTH] = {  // array with item names
-  {"Wifi"},
+  {"Web Server"},
   {"MQTT"},
   {"Buzzer"},
   {"Calibration"}

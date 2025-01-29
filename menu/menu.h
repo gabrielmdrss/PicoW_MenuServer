@@ -428,13 +428,13 @@ void menu(void) {
 		// Fills the display with a specific color
 		ssd1306_Fill(Black);
 
-		// WIFI OPTION
+		// Web Server OPTION
 		if (item_selected == 0){
 			// External function for utilizing and sampling ultrasonic sensor functionality
 
 			// Display header
-			ssd1306_SetCursor(45, 1);
-			ssd1306_WriteString("WI-FI", Font_7x10, White);
+			ssd1306_SetCursor(32, 1);
+			ssd1306_WriteString("WEB SERVER", Font_7x10, White);
 			ssd1306_FillRectangle(1, 15, 128, 16, White);
 			ssd1306_DrawRectangle(1, 20, 127, 63, White);
 

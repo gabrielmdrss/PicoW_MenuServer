@@ -1,28 +1,68 @@
 #ifndef AP_MODE_UTILITY_H
 #define AP_MODE_UTILITY_H
 
-#include "pico/cyw43_arch.h"
-#include <string.h>
+/******************************************************************************
+ * @file    ap_mode_utility.h
+ * @brief   File containing definitions and function prototypes for the
+ *          application of Access Point (AP) mode on the Raspberry Pi Pico W.
+ *
+ * @authors Gabriel Domingos de Medeiros
+ * @date    February 2025
+ * @version 1.0.0
+ *
+ * @note    This file includes the necessary definitions, constants, and function
+ *          prototypes for the application.
+ ******************************************************************************/
 
-#include "lwip/pbuf.h"
-#include "lwip/tcp.h"
+// ---------------------------------- Includes ---------------------------------
 
-#include "dhcpserver.h"
-#include "dnsserver.h"
+#include "pico/cyw43_arch.h"      // Library for using the connectivity module for Raspberry Pi Pico W.
+#include <string.h>               // Standard library for string manipulation functions.
 
-#define TCP_PORT 80
-#define DEBUG_printf printf
-#define POLL_TIME_S 5
-#define HTTP_GET "GET"
-#define HTTP_POST "POST"
-#define HTTP_RESPONSE_HEADERS "HTTP/1.1 %d OK\nContent-Length: %d\nContent-Type: text/html; charset=utf-8\nConnection: close\n\n"
+#include "lwip/pbuf.h"            // Library for packet buffer management in LWIP.
+#include "lwip/tcp.h"             // TCP Function Library.
+
+#include "dhcpserver.h"           // Library for DHCP server functionality.
+#include "dnsserver.h"            // Library for DNS server functionality.
+
+// ----------------------------------- Defines ----------------------------------
+
+#define TCP_PORT 80               // TCP port number for the HTTP server.
+#define DEBUG_printf printf       // Macro for debug printing.
+#define POLL_TIME_S 5             // Polling time in seconds for server operations.
+#define HTTP_GET "GET"            // HTTP GET method string.
+#define HTTP_POST "POST"          // HTTP POST method string.
+#define CONFIG "/config"          // URL path for the configuration page.
+
+/* Defines of Test using the Raspberry Pi Pico Onboard LED*/
 #define LED_TEST_BODY "<html><body><h1>Hello from Pico W.</h1><p>Led is %s</p><p><a href=\"?led=%d\">Turn led %s</a></body></html>"
-#define LED_PARAM "led=%d"
-#define LED_TEST "/ledtest"
-#define CONFIG "/config"
-#define LED_GPIO CYW43_WL_GPIO_LED_PIN
+#define LED_PARAM "led=%d"        // Parameter string for LED control in the URL.
+#define LED_TEST "/ledtest"       // URL path for the LED test page.
+#define CONFIG "/config"          // URL path for the configuration page.
+#define LED_GPIO CYW43_WL_GPIO_LED_PIN // GPIO pin number for the LED on the Raspberry Pi Pico W.
+
+/**
+ * @brief HTTP response headers template.
+ *
+ * This define holds a preformatted HTTP response headers string, including status code and content length.
+ * It is dynamically populated with the status code (`%d`) and content length (`%d`) before being sent to the client.
+ */
+#define HTTP_RESPONSE_HEADERS "HTTP/1.1 %d OK\nContent-Length: %d\nContent-Type: text/html; charset=utf-8\nConnection: close\n\n"
+
+/**
+ * @brief HTTP response for redirection.
+ *
+ * This define holds a preformatted HTTP response string for redirection.
+ * It is dynamically populated with the target URL (`%s`) before being sent to the client.
+ */
 #define HTTP_RESPONSE_REDIRECT "HTTP/1.1 302 Redirect\nLocation: http://%s" CONFIG "\n\n"
 
+/**
+ * @brief HTML body template for Wi-Fi configuration page.
+ *
+ * This define holds a preformatted HTML body string for the Wi-Fi configuration page.
+ * It includes a form for entering SSID and password, styled with inline CSS.
+ */
 #define WIFI_CONFIG_BODY "<html><body style=\"display:flex;justify-content:center;align-items:center;height:100vh;background-color:#e3f2fd;\">\n\
 <div style=\"text-align:center;max-width:400px;padding:20px;border-radius:10px;background-color:white;box-shadow:0 4px 8px rgba(0,0,0,0.2);\">\n\
 <h1 style=\"color:#1976d2;\">Wi-Fi Configuration</h1>\n\
@@ -36,12 +76,26 @@
 </form>\n\
 </div></body></html>"
 
+/**
+ * @brief HTML page template for successful configuration.
+ *
+ * This define holds a preformatted HTML page string for displaying a success message
+ * when the configuration is saved successfully. On this page, there is a button to 
+ * return to the configuration page.
+ */
 #define SUCCESS_PAGE "<html><body style=\"display:flex;justify-content:center;align-items:center;height:100vh;background-color:#e3f2fd;\">\n\
 <div style=\"text-align:center;max-width:400px;padding:20px;border-radius:10px;background-color:white;box-shadow:0 4px 8px rgba(0,0,0,0.2);\">\n\
 <h1 style=\"color:#1976d2;\">Configuration saved successfully!</h1>\n\
 <a href=\"/config\" style=\"display:inline-block;margin-top:20px;padding:10px 20px;background-color:#1976d2;color:white;text-decoration:none;border-radius:5px;font-size:16px;\">Back to Configuration</a>\n\
 </div></body></html>"
 
+/**
+ * @brief HTML page template for failed configuration.
+ *
+ * This define holds a preformatted HTML page string for displaying an error message
+ * when there is a failure in saving the configuration. On this page, there is a button to 
+ * return to the configuration page.
+ */
 #define FAILURE_PAGE "<html><body style=\"display:flex;justify-content:center;align-items:center;height:100vh;background-color:#e3f2fd;\">\n\
 <div style=\"text-align:center;max-width:400px;padding:20px;border-radius:10px;background-color:white;box-shadow:0 4px 8px rgba(0,0,0,0.2);\">\n\
 <h1 style=\"color:#1976d2;\">Error saving configuration</h1>\n\
@@ -49,28 +103,62 @@
 <a href=\"/config\" style=\"display:inline-block;margin-top:20px;padding:10px 20px;background-color:#1976d2;color:white;text-decoration:none;border-radius:5px;font-size:16px;\">Back to Configuration</a>\n\
 </div></body></html>"
 
-char ssid[32] = {0};
-char password[64] = {0}; // Aumentado para aceitar senhas maiores
-int id_pw_collected = 0;
-int aux_connection = 1;
+// ---------------------------------- Variables ---------------------------------
+
+char ssid[32] = {0};              // Array to hold the SSID of the Wi-Fi network.
+char password[64] = {0};          // Array to hold the password of the Wi-Fi network. Increased to accept longer passwords.
+int id_pw_collected = 0;          // Flag to indicate if SSID and password have been collected(1) or not(0).
+int aux_connection = 1;           // Auxiliary variable to indicate whether AP mode has already been disabled(0) or not(1).
 
 
+/**
+ * @brief Structure to hold TCP server state.
+ *
+ * This structure holds the state of the TCP server, including the server PCB,
+ * completion status, and gateway IP address.
+ */
 typedef struct TCP_SERVER_T_ {
-    struct tcp_pcb *server_pcb;
-    bool complete;
-    ip_addr_t gw;
+    struct tcp_pcb *server_pcb;   // Pointer to the server's TCP protocol control block.
+    bool complete;                // Flag to indicate if the server operation is complete.
+    ip_addr_t gw;                 // Gateway IP address.
 } TCP_SERVER_T;
 
+/**
+ * @brief Structure to hold TCP connection state.
+ *
+ * This structure holds the state of a TCP connection, including the connection PCB,
+ * sent length, headers, result, header length, result length, and gateway IP address.
+ */
 typedef struct TCP_CONNECT_STATE_T_ {
-    struct tcp_pcb *pcb;
-    int sent_len;
-    char headers[1024];
-    char result[1024];
-    int header_len;
-    int result_len;
-    ip_addr_t *gw;
+    struct tcp_pcb *pcb;          // Pointer to the connection's TCP protocol control block.
+    int sent_len;                 // Length of data sent.
+    char headers[1024];           // Buffer to hold HTTP headers.
+    char result[1024];            // Buffer to hold HTTP result.
+    int header_len;               // Length of HTTP headers.
+    int result_len;               // Length of HTTP result.
+    ip_addr_t *gw;                // Pointer to the gateway IP address.
 } TCP_CONNECT_STATE_T;
 
+
+// ---------------------------------- Functions ---------------------------------
+
+// --------------------------- Replace Plus with Space Function ---------------------------
+
+/**
+ * @brief Replaces all '+' characters with spaces in a string.
+ *
+ * @param str The string in which to replace '+' characters.
+ *
+ * This function iterates through the given string and replaces every occurrence
+ * of the '+' character with a space (' ').
+ *
+ * ### Behavior:
+ * - Iterates through each character of the string.
+ * - If a '+' character is found, it is replaced with a space.
+ * - Continues until the end of the string is reached.
+ *
+ * @note The modified string is stored in the `str` parameter.
+ */
 void replace_plus_with_space(char *str) {
     while (*str) {
         if (*str == '+') {
@@ -80,11 +168,30 @@ void replace_plus_with_space(char *str) {
     }
 }
 
-int process_post_payload(const char *request, char *payload) {
-    char id[32] = {0};
-    char pw[64] = {0}; // Aumentado para aceitar senhas maiores
 
-    // Extração do SSID
+// --------------------------- Process POST Payload Function ---------------------------
+
+/**
+ * @brief Processes the POST payload to extract SSID and password.
+ *
+ * @param request The HTTP request string.
+ * @param payload The payload string containing the SSID and password.
+ * @return int Returns 0 on success, -1 on failure.
+ *
+ * This function extracts the SSID and password from the given payload string.
+ *
+ * ### Behavior:
+ * - Searches for the "ssid=" and "password=" parameters in the payload.
+ * - Extracts the values of these parameters and stores them in local variables.
+ * - Ensures that the extracted values do not exceed the buffer sizes.
+ *
+ * @note The extracted SSID and password are stored in the `id` and `pw` variables respectively.
+ */
+int process_post_payload(const char *request, char *payload) {
+    char id[32] = {0}; // Temporary variable to store the SSID
+    char pw[64] = {0}; // Temporary variable to store the PASSWORD
+
+    // SSID Extraction
     char *ssid_start = strstr(payload, "ssid=");
     if (ssid_start) {
         ssid_start += strlen("ssid=");
@@ -96,45 +203,74 @@ int process_post_payload(const char *request, char *payload) {
         }
     }
 
-    // Extração da senha
+    // PASSWORD Extraction
     char *password_start = strstr(payload, "password=");
     if (password_start) {
         password_start += strlen("password=");
-        char *password_end = strchr(password_start, '&'); // Procure o próximo delimitador
+        char *password_end = strchr(password_start, '&'); // Find the next delimiter
         size_t password_len = password_end ? (size_t)(password_end - password_start) : strlen(password_start);
 
         if (password_len < sizeof(pw)) {
             strncpy(pw, password_start, password_len);
-            pw[password_len] = '\0'; // Garantir terminação
+            pw[password_len] = '\0'; // Ensure termination
         }
     }
 
     // Debug
-    DEBUG_printf("SSID extraído: %s\n", id);
-    DEBUG_printf("Password extraído: %s\n", pw);
+    DEBUG_printf("SSID Extracted: %s\n", id);
+    DEBUG_printf("PASSWORD Extracted: %s\n", pw);
 
+    // Saving values ​​in global variables
     strncpy(ssid, id, sizeof(ssid) - 1);
     strncpy(password, pw, sizeof(password) - 1);
 
-
-    // Retorne sucesso ou erro
+    // Return success or error
     return (strlen(id) > 0 && strlen(pw) > 0) ? 0 : -1;
 }
 
+
+// --------------------------- Close Client Connection Function ---------------------------
+
+/**
+ * @brief Closes the TCP client connection and frees associated resources.
+ *
+ * @param con_state Pointer to the TCP connection state structure.
+ * @param client_pcb Pointer to the client's TCP protocol control block.
+ * @param close_err Error code to return if the close operation fails.
+ * @return err_t Returns ERR_OK on success, or an appropriate error code on failure.
+ *
+ * This function closes the TCP client connection, frees associated resources,
+ * and handles any errors that occur during the close operation.
+ *
+ * ### Behavior:
+ * - Asserts that the connection state and client PCB are valid.
+ * - Clears the TCP callbacks for the client PCB.
+ * - Attempts to close the TCP connection.
+ * - If the close operation fails, it aborts the connection.
+ * - Frees the connection state structure if it exists.
+ */
 static err_t tcp_close_client_connection(TCP_CONNECT_STATE_T *con_state, struct tcp_pcb *client_pcb, err_t close_err) {
     if (client_pcb) {
+        // Ensure the connection state and client PCB are valid
         assert(con_state && con_state->pcb == client_pcb);
+
+        // Clear the TCP callbacks for the client PCB
         tcp_arg(client_pcb, NULL);
         tcp_poll(client_pcb, NULL, 0);
         tcp_sent(client_pcb, NULL);
         tcp_recv(client_pcb, NULL);
         tcp_err(client_pcb, NULL);
+
+        // Attempt to close the TCP connection
         err_t err = tcp_close(client_pcb);
         if (err != ERR_OK) {
+            // If closing fails, abort the connection
             DEBUG_printf("close failed %d, calling abort\n", err);
             tcp_abort(client_pcb);
             close_err = ERR_ABRT;
         }
+
+        // Free the connection state structure if it exists
         if (con_state) {
             free(con_state);
         }
@@ -142,25 +278,99 @@ static err_t tcp_close_client_connection(TCP_CONNECT_STATE_T *con_state, struct 
     return close_err;
 }
 
+
+// --------------------------- Close TCP Server Function ---------------------------
+
+/**
+ * @brief Closes the TCP server connection and frees associated resources.
+ *
+ * @param state Pointer to the TCP server state structure.
+ *
+ * This function closes the TCP server connection and frees associated resources.
+ *
+ * ### Behavior:
+ * - Checks if the server PCB is valid.
+ * - Clears the TCP argument for the server PCB.
+ * - Closes the TCP connection for the server PCB.
+ * - Sets the server PCB pointer to NULL.
+ *
+ * @note The server PCB is set to NULL after closing the connection.
+ */
 static void tcp_server_close(TCP_SERVER_T *state) {
     if (state->server_pcb) {
+        // Clear the TCP argument for the server PCB
         tcp_arg(state->server_pcb, NULL);
+
+        // Close the TCP connection for the server PCB
         tcp_close(state->server_pcb);
+
+        // Set the server PCB pointer to NULL
         state->server_pcb = NULL;
     }
 }
 
+
+// --------------------------- TCP Server Sent Callback Function ---------------------------
+
+/**
+ * @brief Callback function for when data is successfully sent by the TCP server.
+ *
+ * @param arg Pointer to the argument passed to the callback (connection state).
+ * @param pcb Pointer to the TCP protocol control block.
+ * @param len Length of data that was sent.
+ * @return err_t Returns ERR_OK on success, or an appropriate error code on failure.
+ *
+ * This function is called when data is successfully sent by the TCP server.
+ * It updates the sent length in the connection state and checks if all data has been sent.
+ * If all data has been sent, it closes the client connection.
+ *
+ * ### Behavior:
+ * - Updates the sent length in the connection state.
+ * - Checks if the total sent length is greater than or equal to the sum of header and result lengths.
+ * - If all data has been sent, it closes the client connection.
+ *
+ * @note The connection state and PCB are used to manage the TCP connection.
+ */
 static err_t tcp_server_sent(void *arg, struct tcp_pcb *pcb, u16_t len) {
     TCP_CONNECT_STATE_T *con_state = (TCP_CONNECT_STATE_T*)arg;
     DEBUG_printf("tcp_server_sent %u\n", len);
+    
+    // Update the sent length in the connection state
     con_state->sent_len += len;
+    
+    // Check if all data has been sent
     if (con_state->sent_len >= con_state->header_len + con_state->result_len) {
         DEBUG_printf("all done\n");
+        // Close the client connection
         return tcp_close_client_connection(con_state, pcb, ERR_OK);
     }
     return ERR_OK;
 }
 
+
+// --------------------------- Test Server Content Function ---------------------------
+
+/**
+ * @brief Generates the server content based on the request and parameters.
+ *
+ * @param request The HTTP request string.
+ * @param params The parameters string from the HTTP request.
+ * @param result The buffer to store the generated result.
+ * @param max_result_len The maximum length of the result buffer.
+ * @return int The length of the generated result.
+ *
+ * This function generates the server content based on the provided request and parameters.
+ * It checks the state of the LED and updates it if necessary, then generates the appropriate
+ * HTML content to be sent back to the client.
+ *
+ * ### Behavior:
+ * - Checks if the request matches the CONFIG path.
+ * - Retrieves the current state of the LED.
+ * - If parameters are provided, updates the LED state based on the parameters.
+ * - Generates the HTML content based on the LED state.
+ *
+ * @note The generated result is stored in the `result` parameter.
+ */
 static int test_server_content(const char *request, const char *params, char *result, size_t max_result_len) {
     int len = 0;
     if (strncmp(request, CONFIG, sizeof(CONFIG) - 1) == 0) {
@@ -192,6 +402,33 @@ static int test_server_content(const char *request, const char *params, char *re
     return len;
 }
 
+
+// --------------------------- TCP Server Receive Callback Function ---------------------------
+
+/**
+ * @brief Callback function for receiving data from the TCP client.
+ *
+ * @param arg Pointer to the argument passed to the callback (connection state).
+ * @param pcb Pointer to the TCP protocol control block.
+ * @param p Pointer to the packet buffer containing the received data.
+ * @param err Error code indicating the status of the receive operation.
+ * @return err_t Returns ERR_OK on success, or an appropriate error code on failure.
+ *
+ * This function is called when data is received from the TCP client. It processes
+ * the received data, handles HTTP GET and POST requests, and generates the appropriate
+ * response to be sent back to the client.
+ *
+ * ### Behavior:
+ * - Checks if the connection is closed.
+ * - Asserts the validity of the connection state and PCB.
+ * - Copies the received request into the buffer.
+ * - Handles HTTP GET and POST requests.
+ * - Generates the appropriate response content.
+ * - Sends the response headers and body to the client.
+ * - Frees the packet buffer and returns the appropriate error code.
+ *
+ * @note The connection state and PCB are used to manage the TCP connection.
+ */
 err_t tcp_server_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err) {
     TCP_CONNECT_STATE_T *con_state = (TCP_CONNECT_STATE_T*)arg;
     if (!p) {
@@ -273,48 +510,48 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
             char *request = con_state->headers + sizeof(HTTP_POST); // + space
             char *space = strchr(request, ' ');
             if (space) {
-                *space = 0; // Terminar a string no final do path
+                *space = 0; // Terminate the string at the end of the path
             }
 
-            // Verifica se o marcador foi encontrado
+            // Check if the marker was found
             char *payload = strstr(con_state->headers, "\r\n\r\n");
             if (p->payload) {
-                p->payload += 4; // Avança os 4 caracteres de "\r\n\r\n" para chegar no corpo
+                p->payload += 4; // // Advance 4 characters of "\r\n\r\n" to reach the body
 
-                // Garantir que o payload seja uma string terminada por '\0'
+                // Ensure the payload is a null-terminated string
                 ((char *)p->payload)[p->len - 4] = '\0';
 
-                // Processar os dados recebidos no payload
+                // Process the received data in the payload
                  int process_result = process_post_payload(request, p->payload);
                 if (process_result >= 0) {
-                    // Resposta de sucesso com página
+                    // Success response with page
                     id_pw_collected = 1;
                     snprintf(con_state->result, sizeof(con_state->result), SUCCESS_PAGE);
                 } else {
-                    // Resposta de falha com página
+                    // Failure response with page
                     snprintf(con_state->result, sizeof(con_state->result), FAILURE_PAGE);
                 }
             } else {
-                // Resposta de falha com página
+                // Failure response with page
                 snprintf(con_state->result, sizeof(con_state->result), FAILURE_PAGE);
             }
 
-            // Atualizar os headers para servir o HTML
+            // Update headers to serve the HTML
             con_state->header_len = snprintf(con_state->headers, sizeof(con_state->headers),
                 HTTP_RESPONSE_HEADERS, 200, strlen(con_state->result));
 
-            // Enviar os headers para o cliente
+            // Send the headers to the client
             con_state->sent_len = 0;
             err_t err = tcp_write(pcb, con_state->headers, con_state->header_len, 0);
             if (err != ERR_OK) {
-                DEBUG_printf("Falha ao enviar os headers do POST: %d\n", err);
+                DEBUG_printf("Failed to send POST headers: %d\n", err);
                 return tcp_close_client_connection(con_state, pcb, err);
             }
 
-            // Enviar o corpo da resposta para o cliente
+            // Send the response body to the client
             err = tcp_write(pcb, con_state->result, strlen(con_state->result), 0);
             if (err != ERR_OK) {
-                DEBUG_printf("Falha ao enviar os dados do corpo: %d\n", err);
+                DEBUG_printf("Failed to send body data: %d\n", err);
                 return tcp_close_client_connection(con_state, pcb, err);
             }
         }
@@ -325,20 +562,84 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
     return ERR_OK;
 }
 
+
+// --------------------------- Server Poll Function ---------------------------
+
+/**
+ * @brief Polls the TCP server for activity and handles client disconnection.
+ *
+ * @param arg Pointer to the argument passed to the poll function, typically the connection state.
+ * @param pcb Pointer to the TCP protocol control block for the client.
+ * @return err_t Returns ERR_OK on success, or an appropriate error code on failure.
+ *
+ * This function is called periodically to poll the TCP server for activity.
+ * If a client is connected, it handles the disconnection of the client.
+ *
+ * ### Behavior:
+ * - Casts the argument to the connection state structure.
+ * - Logs the poll function call for debugging purposes.
+ * - Calls the function to close the client connection.
+ *
+ * @note This function is typically registered as a callback for the TCP server poll event.
+ */
 static err_t tcp_server_poll(void *arg, struct tcp_pcb *pcb) {
     TCP_CONNECT_STATE_T *con_state = (TCP_CONNECT_STATE_T*)arg;
     DEBUG_printf("tcp_server_poll_fn\n");
     return tcp_close_client_connection(con_state, pcb, ERR_OK); // Just disconnect clent?
 }
 
+
+// --------------------------- Server Error Function ---------------------------
+
+/**
+ * @brief Handles TCP server errors and closes the client connection.
+ *
+ * @param arg Pointer to the argument passed to the error function, typically the connection state.
+ * @param err The error code indicating the type of error.
+ *
+ * This function is called when an error occurs on the TCP server.
+ * It handles the error by closing the client connection if the error is not ERR_ABRT.
+ *
+ * ### Behavior:
+ * - Casts the argument to the connection state structure.
+ * - Logs the error for debugging purposes.
+ * - Calls the function to close the client connection if the error is not ERR_ABRT.
+ *
+ * @note This function is typically registered as a callback for the TCP server error event.
+ */
 static void tcp_server_err(void *arg, err_t err) {
     TCP_CONNECT_STATE_T *con_state = (TCP_CONNECT_STATE_T*)arg;
     if (err != ERR_ABRT) {
+        // Log the error for debugging purposes
         DEBUG_printf("tcp_client_err_fn %d\n", err);
+
+        // Close the client connection
         tcp_close_client_connection(con_state, con_state->pcb, err);
     }
 }
 
+
+// --------------------------- Server Accept Function ---------------------------
+
+/**
+ * @brief Accepts a new TCP client connection and sets up the connection state.
+ *
+ * @param arg Pointer to the argument passed to the accept function, typically the server state.
+ * @param client_pcb Pointer to the client's TCP protocol control block.
+ * @param err The error code indicating the status of the accept operation.
+ * @return err_t Returns ERR_OK on success, or an appropriate error code on failure.
+ *
+ * This function is called when a new TCP client connection is accepted.
+ * It sets up the connection state and registers the necessary callbacks for the client.
+ *
+ * ### Behavior:
+ * - Checks for errors in the accept operation.
+ * - Logs the connection status for debugging purposes.
+ * - Allocates memory for the connection state structure.
+ * - Sets up the connection state and registers the necessary callbacks.
+ *
+ * @note This function is typically registered as a callback for the TCP server accept event.
+ */
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err) {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
     if (err != ERR_OK || client_pcb == NULL) {
@@ -366,6 +667,25 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     return ERR_OK;
 }
 
+
+// --------------------------- Server Open Function ---------------------------
+
+/**
+ * @brief Opens a TCP server and starts listening for client connections.
+ *
+ * @param arg Pointer to the argument passed to the open function, typically the server state.
+ * @return bool Returns true on success, false on failure.
+ *
+ * This function initializes and opens a TCP server, binds it to a port, and starts listening for client connections.
+ *
+ * ### Behavior:
+ * - Creates a new TCP protocol control block (PCB).
+ * - Binds the PCB to the specified port.
+ * - Starts listening for client connections with a backlog of 1.
+ * - Registers the necessary callbacks for accepting client connections.
+ *
+ * @note This function is typically called to start the TCP server.
+ */
 static bool tcp_server_open(void *arg) {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
     DEBUG_printf("starting server on port %u\n", TCP_PORT);
