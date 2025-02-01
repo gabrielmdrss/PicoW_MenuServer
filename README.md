@@ -1,7 +1,7 @@
 # PicoW_MenuServer
 
 ## Description
-PicoW_MenuServer is an IoT hub based on the BitDogLab development board, equipped with a Raspberry Pi Pico W, LEDs, pushbuttons, a 5x5 addressable LED matrix, and an SSD1306 display. The project allows initial configuration via Access Point and an interactive menu for feature control.
+PicoW_MenuServer  is an IoT hub based on the BitDogLab development board, equipped with a Raspberry Pi Pico W, LEDs, pushbuttons, a 5x5 addressable LED matrix, and an SSD1306 display. The project allows initial configuration via Access Point and an interactive menu for feature control.
 
 ## Features
 ### 1. Network Configuration
