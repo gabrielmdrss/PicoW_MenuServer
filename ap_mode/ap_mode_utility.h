@@ -142,57 +142,60 @@ typedef struct TCP_CONNECT_STATE_T_ {
 
 // ---------------------------------- Functions ---------------------------------
 
-// --------------------------- Replace Plus with Space Function ---------------------------
-
-/**
- * @brief Replaces all '+' characters with spaces in a string.
- *
- * @param str The string in which to replace '+' characters.
- *
- * This function iterates through the given string and replaces every occurrence
- * of the '+' character with a space (' ').
- *
- * ### Behavior:
- * - Iterates through each character of the string.
- * - If a '+' character is found, it is replaced with a space.
- * - Continues until the end of the string is reached.
- *
- * @note The modified string is stored in the `str` parameter.
- */
-void replace_plus_with_space(char *str) {
-    while (*str) {
-        if (*str == '+') {
-            *str = ' ';
-        }
-        str++;
-    }
-}
-
-
 // --------------------------- Process POST Payload Function ---------------------------
 
 /**
- * @brief Processes the POST payload to extract SSID and password.
+ * @brief Processes the POST request payload to extract SSID and password.
  *
- * @param request The HTTP request string.
- * @param payload The payload string containing the SSID and password.
- * @return int Returns 0 on success, -1 on failure.
+ * This function takes a URL-encoded payload from an HTTP POST request,
+ * decodes it, extracts the SSID and password parameters, and stores them
+ * in global variables for further use.
  *
- * This function extracts the SSID and password from the given payload string.
+ * @param request The full HTTP request (not used in this function but kept for extensibility).
+ * @param payload The URL-encoded POST request body containing SSID and password.
+ * 
+ * @return 0 if SSID and password are successfully extracted, -1 otherwise.
  *
- * ### Behavior:
- * - Searches for the "ssid=" and "password=" parameters in the payload.
- * - Extracts the values of these parameters and stores them in local variables.
- * - Ensures that the extracted values do not exceed the buffer sizes.
- *
- * @note The extracted SSID and password are stored in the `id` and `pw` variables respectively.
+ * @note The function ensures proper NULL-termination of strings to prevent buffer overflows.
+ *       It also handles URL encoding, replacing "%XX" sequences with their ASCII equivalents
+ *       and converting "+" symbols to spaces.
  */
 int process_post_payload(const char *request, char *payload) {
-    char id[32] = {0}; // Temporary variable to store the SSID
-    char pw[64] = {0}; // Temporary variable to store the PASSWORD
+    if (!payload) return -1; // Null pointer protection
 
-    // SSID Extraction
-    char *ssid_start = strstr(payload, "ssid=");
+    // Ensure payload is properly null-terminated
+    size_t payload_len = strlen(payload);
+    if (payload_len == 0) return -1; // Empty payload check
+
+    // Buffer for decoded payload to prevent buffer overflow
+    char decoded_payload[1024] = {0}; 
+
+    // URL decoding logic: Converts "%XX" to ASCII and replaces "+" with space
+    char *src = payload;
+    char *dest = decoded_payload;
+    char hex[3] = {0}; // Temporary storage for hex conversion
+
+    while (*src && (dest - decoded_payload) < sizeof(decoded_payload) - 1) {
+        if (*src == '%' && isxdigit((unsigned char)src[1]) && isxdigit((unsigned char)src[2])) {
+            hex[0] = src[1];
+            hex[1] = src[2];
+            *dest++ = (char)strtol(hex, NULL, 16);
+            src += 3; // Skip past "%XX"
+        } else if (*src == '+') {
+            *dest++ = ' '; // Convert '+' to space
+            src++;
+        } else {
+            *dest++ = *src++; // Copy normal characters
+        }
+    }
+    *dest = '\0'; // Ensure string is null-terminated
+
+    // Temporary buffers for SSID and password extraction
+    char id[32] = {0}; // SSID
+    char pw[64] = {0}; // Password
+
+    // Extract SSID
+    char *ssid_start = strstr(decoded_payload, "ssid=");
     if (ssid_start) {
         ssid_start += strlen("ssid=");
         char *ssid_end = strchr(ssid_start, '&');
@@ -203,28 +206,28 @@ int process_post_payload(const char *request, char *payload) {
         }
     }
 
-    // PASSWORD Extraction
-    char *password_start = strstr(payload, "password=");
+    // Extract password
+    char *password_start = strstr(decoded_payload, "password=");
     if (password_start) {
         password_start += strlen("password=");
-        char *password_end = strchr(password_start, '&'); // Find the next delimiter
+        char *password_end = strchr(password_start, '&'); // Find next parameter
         size_t password_len = password_end ? (size_t)(password_end - password_start) : strlen(password_start);
 
         if (password_len < sizeof(pw)) {
             strncpy(pw, password_start, password_len);
-            pw[password_len] = '\0'; // Ensure termination
+            pw[password_len] = '\0'; // Ensure string is null-terminated
         }
     }
 
-    // Debug
-    DEBUG_printf("SSID Extracted: %s\n", id);
-    DEBUG_printf("PASSWORD Extracted: %s\n", pw);
+    // Debugging logs for extracted credentials
+    DEBUG_printf("Extracted SSID: %s\n", id);
+    DEBUG_printf("Extracted PASSWORD: %s\n", pw);
 
-    // Saving values ​​in global variables
+    // Store extracted values in global variables
     strncpy(ssid, id, sizeof(ssid) - 1);
     strncpy(password, pw, sizeof(password) - 1);
 
-    // Return success or error
+    // Return success only if both SSID and password were extracted successfully
     return (strlen(id) > 0 && strlen(pw) > 0) ? 0 : -1;
 }
 
@@ -522,7 +525,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
                 ((char *)p->payload)[p->len - 4] = '\0';
 
                 // Process the received data in the payload
-                 int process_result = process_post_payload(request, p->payload);
+                int process_result = process_post_payload(request, p->payload);
                 if (process_result >= 0) {
                     // Success response with page
                     id_pw_collected = 1;

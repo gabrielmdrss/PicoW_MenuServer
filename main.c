@@ -103,9 +103,6 @@ int main() {
                 // Tenta conectar ao Wi-Fi
                 printf("Conectando ao Wi-Fi...\n");
 
-                replace_plus_with_space(ssid);
-                replace_plus_with_space(password);
-
                 if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 20000)) {
                     printf("Erro: Falha ao conectar ao Wi-Fi.\n");
                     ssd1306_SetCursor(21, 54);
