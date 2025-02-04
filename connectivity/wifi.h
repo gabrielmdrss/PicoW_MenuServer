@@ -42,32 +42,71 @@
  * When the button state is "Button is pressioned", the response dynamically updates
  * to reflect the status in the `<p>` tag of the HTML content.
  */
-#define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nRefresh: 1\r\n\r\n" \
+// #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nRefresh: 1\r\n\r\n" \
+//                       "<!DOCTYPE html><html>" \
+//                       "<head>" \
+//                       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" \
+//                       "<meta http-equiv=\"refresh\" content=\"1\">" \
+//                       "<link rel=\"icon\" href=\"data:,\">" \
+//                       "<style>" \
+//                       "html { font-family: Arial, sans-serif; display: inline-block; margin: 0 auto; text-align: center; background-color: #f0f0f5; }" \
+//                       "body { margin: 0; padding: 0; }" \
+//                       "h1 { color: #333; margin-top: 20px; }" \
+//                       "p { font-size: 18px; color: #555; margin: 20px auto; }" \
+//                       ".container { width: 90%; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); }" \
+//                       ".buttonGreen { background-color: #4CAF50; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
+//                       ".buttonGreen:hover { background-color: #45a049; }" \
+//                       ".buttonRed { background-color: #D11D53; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
+//                       ".buttonRed:hover { background-color: #c21845; }" \
+//                       "</style>" \
+//                       "</head>" \
+//                       "<body>" \
+//                       "<div class=\"container\">" \
+//                       "<h1>Control LED</h1>" \
+//                       "<form>" \
+//                       "<button class=\"buttonGreen\" name=\"led\" value=\"on\" type=\"submit\">LED ON</button>" \
+//                       "<button class=\"buttonRed\" name=\"led\" value=\"off\" type=\"submit\">LED OFF</button>" \
+//                       "</form>" \
+//                       "<p>Button State: %s</p>" \
+//                       "</div>" \
+//                       "</body></html>\r\n"
+
+#define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" \
                       "<!DOCTYPE html><html>" \
                       "<head>" \
                       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" \
-                      "<meta http-equiv=\"refresh\" content=\"1\">" \
                       "<link rel=\"icon\" href=\"data:,\">" \
                       "<style>" \
-                      "html { font-family: Arial, sans-serif; display: inline-block; margin: 0 auto; text-align: center; background-color: #f0f0f5; }" \
+                      "html { font-family: Arial, sans-serif; text-align: center; background-color: #f0f0f5; }" \
                       "body { margin: 0; padding: 0; }" \
                       "h1 { color: #333; margin-top: 20px; }" \
                       "p { font-size: 18px; color: #555; margin: 20px auto; }" \
                       ".container { width: 90%; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); }" \
-                      ".buttonGreen { background-color: #4CAF50; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
-                      ".buttonGreen:hover { background-color: #45a049; }" \
-                      ".buttonRed { background-color: #D11D53; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
-                      ".buttonRed:hover { background-color: #c21845; }" \
+                      ".button { border: none; color: white; padding: 15px 32px; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; display: inline-block; }" \
+                      ".red { background-color: #D11D53; } .red:hover { background-color: #c21845; }" \
+                      ".green { background-color: #4CAF50; } .green:hover { background-color: #45a049; }" \
+                      ".blue { background-color: #007BFF; } .blue:hover { background-color: #006FE6; }" \
+                      ".purple { background-color:rgb(122, 3, 201); } .yellow:hover { background-color:rgb(122, 3, 201); }" \
+                      ".off { background-color: #555; } .off:hover { background-color: #333; }" \
+                      "input[type='range'] { width: 80%; margin: 20px 0; }" \
                       "</style>" \
                       "</head>" \
                       "<body>" \
                       "<div class=\"container\">" \
                       "<h1>Control LED</h1>" \
                       "<form>" \
-                      "<button class=\"buttonGreen\" name=\"led\" value=\"on\" type=\"submit\">LED ON</button>" \
-                      "<button class=\"buttonRed\" name=\"led\" value=\"off\" type=\"submit\">LED OFF</button>" \
+                      "<button class=\"button red\" name=\"led\" value=\"red\" type=\"submit\">Red</button>" \
+                      "<button class=\"button green\" name=\"led\" value=\"green\" type=\"submit\">Green</button>" \
+                      "<button class=\"button blue\" name=\"led\" value=\"blue\" type=\"submit\">Blue</button>" \
+                      "<button class=\"button purple\" name=\"led\" value=\"purple\" type=\"submit\">Purple</button>" \
+                      "<button class=\"button off\" name=\"led\" value=\"off\" type=\"submit\">Turn Off</button>" \
                       "</form>" \
                       "<p>Button State: %s</p>" \
+                      "<form>" \
+                      "<p>Brightness:</p>" \
+                      "<input type='range' min='0' max='255' value='%s' name='brightness'>" \
+                      "<br><input type='submit' value='Set Brightness'>" \
+                      "</form>" \
                       "</div>" \
                       "</body></html>\r\n"
 
@@ -113,37 +152,58 @@ char * current_request = "none"; // This string holds the value of the current H
  */
 static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     
-    // Checks if the connection was closed by the client
+    // Verifica se a conexão foi fechada pelo cliente
     if (p == NULL) {
-        // Client closed the connection
         tcp_close(tpcb);
         return ERR_OK;
     }
 
-    // Process the HTTP request
+    // Processa a requisição HTTP
     char *request = (char *)p->payload;
 
-    // Checks if the request contains the command to turn on the LED.
-    if (strstr(request, "GET /?led=on")) {
-        current_request = "/?led=on";
-        pwm_set_gpio_level(LED_BLUE_PIN, 255);  // Acende o LED azul com brilho máximo
-    } else if (strstr(request, " /?led=off")) {
+    // Inicializa o estado padrão do LED
+    int red = 0, green = 0, blue = 0;
+
+    // Verifica qual botão foi pressionado
+    if (strstr(request, "GET /?led=red")) {
+        current_request = "/?led=red";
+        red = 255; green = 0; blue = 0;  // LED vermelho
+    } 
+    else if (strstr(request, "GET /?led=green")) {
+        current_request = "/?led=green";
+        red = 0; green = 255; blue = 0;  // LED verde
+    }
+    else if (strstr(request, "GET /?led=blue")) {
+        current_request = "/?led=blue";
+        red = 0; green = 0; blue = 255;  // LED azul
+    }
+    else if (strstr(request, "GET /?led=purple")) {
+        current_request = "/?led=yellow";
+        red = 255; green = 255; blue = 0;  // LED amarelo
+    }
+    else if (strstr(request, "GET /?led=off")) {
         current_request = "/?led=off";
-        pwm_set_gpio_level(LED_BLUE_PIN, 0);  // Acende o LED azul com brilho máximo
-    } else
-        current_request = "none";
+        red = 0; green = 0; blue = 0;  // Desligar LED
+    }
+    
+    // Aplica os valores PWM aos pinos correspondentes
+    pwm_set_gpio_level(LED_RED_PIN, red);
+    pwm_set_gpio_level(LED_GREEN_PIN, green);
+    pwm_set_gpio_level(LED_BLUE_PIN, blue);
 
-    // Replace %s in HTTP_RESPONSE
-    snprintf(http_response, sizeof(http_response), HTTP_RESPONSE, button_state);
+    // Atualiza a resposta HTTP com o estado do botão
+    snprintf(http_response, sizeof(http_response), HTTP_RESPONSE, current_request);
 
-    // Send the response (example)
+    // Envia a resposta
     tcp_write(tpcb, http_response, strlen(http_response), TCP_WRITE_FLAG_COPY);
 
-    // Free the received buffer
+    // Libera o buffer recebido
     pbuf_free(p);
 
     return ERR_OK;
 }
+
+
 
 
 // --------------------------- Connection Callback Function ---------------------------

@@ -110,7 +110,7 @@ int main() {
                     ssd1306_UpdateScreen();
                     return -1;
                 }
-                ssd1306_SetCursor(30, 54);
+                ssd1306_SetCursor(35, 54);
                 ssd1306_WriteString("CONNECTED", Font_6x8, White);
                 ssd1306_UpdateScreen();
                 sleep_ms(2000);
