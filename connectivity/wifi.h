@@ -42,35 +42,6 @@
  * When the button state is "Button is pressioned", the response dynamically updates
  * to reflect the status in the `<p>` tag of the HTML content.
  */
-// #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nRefresh: 1\r\n\r\n" \
-//                       "<!DOCTYPE html><html>" \
-//                       "<head>" \
-//                       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" \
-//                       "<meta http-equiv=\"refresh\" content=\"1\">" \
-//                       "<link rel=\"icon\" href=\"data:,\">" \
-//                       "<style>" \
-//                       "html { font-family: Arial, sans-serif; display: inline-block; margin: 0 auto; text-align: center; background-color: #f0f0f5; }" \
-//                       "body { margin: 0; padding: 0; }" \
-//                       "h1 { color: #333; margin-top: 20px; }" \
-//                       "p { font-size: 18px; color: #555; margin: 20px auto; }" \
-//                       ".container { width: 90%; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); }" \
-//                       ".buttonGreen { background-color: #4CAF50; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
-//                       ".buttonGreen:hover { background-color: #45a049; }" \
-//                       ".buttonRed { background-color: #D11D53; border: none; color: white; padding: 15px 32px; text-align: center; font-size: 16px; margin: 10px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }" \
-//                       ".buttonRed:hover { background-color: #c21845; }" \
-//                       "</style>" \
-//                       "</head>" \
-//                       "<body>" \
-//                       "<div class=\"container\">" \
-//                       "<h1>Control LED</h1>" \
-//                       "<form>" \
-//                       "<button class=\"buttonGreen\" name=\"led\" value=\"on\" type=\"submit\">LED ON</button>" \
-//                       "<button class=\"buttonRed\" name=\"led\" value=\"off\" type=\"submit\">LED OFF</button>" \
-//                       "</form>" \
-//                       "<p>Button State: %s</p>" \
-//                       "</div>" \
-//                       "</body></html>\r\n"
-
 #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" \
                       "<!DOCTYPE html><html>" \
                       "<head>" \
@@ -86,8 +57,9 @@
                       ".red { background-color: #D11D53; } .red:hover { background-color: #c21845; }" \
                       ".green { background-color: #4CAF50; } .green:hover { background-color: #45a049; }" \
                       ".blue { background-color: #007BFF; } .blue:hover { background-color: #006FE6; }" \
-                      ".purple { background-color:rgb(122, 3, 201); } .yellow:hover { background-color:rgb(122, 3, 201); }" \
+                      ".purple { background-color:rgb(122, 3, 201); } .purple:hover { background-color:rgb(122, 3, 201); }" \
                       ".off { background-color: #555; } .off:hover { background-color: #333; }" \
+                      ".brightness { background-color: #FFA500; } .brightness:hover { background-color: #e59400; }" \
                       "input[type='range'] { width: 80%; margin: 20px 0; }" \
                       "</style>" \
                       "</head>" \
@@ -101,11 +73,10 @@
                       "<button class=\"button purple\" name=\"led\" value=\"purple\" type=\"submit\">Purple</button>" \
                       "<button class=\"button off\" name=\"led\" value=\"off\" type=\"submit\">Turn Off</button>" \
                       "</form>" \
-                      "<p>Button State: %s</p>" \
-                      "<form>" \
                       "<p>Brightness:</p>" \
+                      "<form>" \
                       "<input type='range' min='0' max='255' value='%s' name='brightness'>" \
-                      "<br><input type='submit' value='Set Brightness'>" \
+                      "<br><button class=\"button brightness\" type='submit'>Set Brightness</button>" \
                       "</form>" \
                       "</div>" \
                       "</body></html>\r\n"
@@ -117,6 +88,8 @@ char http_response[2048];         // The content of the HTTP response that will 
 const char *button_state = "Button is not pressioned"; // String that holds the current state of the button.
 int start_wifi = 0;              // Integer that acts as a flag to indicate if Wi-Fi initialization started.
 char * current_request = "none"; // This string holds the value of the current HTTP request being processed.
+static int brightness = 128;     // The initial brightness value for the LED.
+static int last_red = 0, last_green = 0, last_blue = 0;  // Armazena a última cor
 
 
 // ---------------------------------- Functions ---------------------------------
@@ -152,58 +125,69 @@ char * current_request = "none"; // This string holds the value of the current H
  */
 static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     
-    // Verifica se a conexão foi fechada pelo cliente
     if (p == NULL) {
         tcp_close(tpcb);
         return ERR_OK;
     }
 
-    // Processa a requisição HTTP
     char *request = (char *)p->payload;
+    int red = last_red, green = last_green, blue = last_blue;  // Mantém a última cor
 
-    // Inicializa o estado padrão do LED
-    int red = 0, green = 0, blue = 0;
-
-    // Verifica qual botão foi pressionado
+    // Processar mudança de cor do LED
     if (strstr(request, "GET /?led=red")) {
-        current_request = "/?led=red";
-        red = 255; green = 0; blue = 0;  // LED vermelho
+        red = 255; green = 0; blue = 0;
     } 
     else if (strstr(request, "GET /?led=green")) {
-        current_request = "/?led=green";
-        red = 0; green = 255; blue = 0;  // LED verde
+        red = 0; green = 255; blue = 0;
     }
     else if (strstr(request, "GET /?led=blue")) {
-        current_request = "/?led=blue";
-        red = 0; green = 0; blue = 255;  // LED azul
+        red = 0; green = 0; blue = 255;
     }
     else if (strstr(request, "GET /?led=purple")) {
-        current_request = "/?led=yellow";
-        red = 255; green = 255; blue = 0;  // LED amarelo
+        red = 255; green = 0; blue = 255;
     }
     else if (strstr(request, "GET /?led=off")) {
-        current_request = "/?led=off";
-        red = 0; green = 0; blue = 0;  // Desligar LED
+        red = 0; green = 0; blue = 0;
     }
+
+    // Atualizar cor armazenada somente se não for um "off"
+    if (!(red == 0 && green == 0 && blue == 0)) {
+        last_red = red;
+        last_green = green;
+        last_blue = blue;
+    }
+
+    // Processar ajuste de brilho
+    char *brightness_param = strstr(request, "brightness=");
     
-    // Aplica os valores PWM aos pinos correspondentes
-    pwm_set_gpio_level(LED_RED_PIN, red);
-    pwm_set_gpio_level(LED_GREEN_PIN, green);
-    pwm_set_gpio_level(LED_BLUE_PIN, blue);
+    if (brightness_param) {
+        char *brightness_value = brightness_param + 10;
+        
+        while (*brightness_value && !isdigit(*brightness_value)) {
+            brightness_value++;  
+        }
 
-    // Atualiza a resposta HTTP com o estado do botão
-    snprintf(http_response, sizeof(http_response), HTTP_RESPONSE, current_request);
+        brightness = strtol(brightness_value, NULL, 10);
+    }
 
-    // Envia a resposta
+    printf("brightness: %d\n", brightness);
+
+    // Aplicar brilho à cor do LED
+    pwm_set_gpio_level(LED_RED_PIN, (red * brightness) / 255);
+    pwm_set_gpio_level(LED_GREEN_PIN, (green * brightness) / 255);
+    pwm_set_gpio_level(LED_BLUE_PIN, (blue * brightness) / 255);
+
+    // Atualizar resposta HTTP
+    snprintf(http_response, sizeof(http_response), HTTP_RESPONSE, brightness);
+
+    // Enviar resposta
     tcp_write(tpcb, http_response, strlen(http_response), TCP_WRITE_FLAG_COPY);
 
-    // Libera o buffer recebido
+    // Liberar buffer recebido
     pbuf_free(p);
 
     return ERR_OK;
 }
-
-
 
 
 // --------------------------- Connection Callback Function ---------------------------
