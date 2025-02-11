@@ -49,3 +49,10 @@ PicoW_MenuServer  is an IoT hub based on the BitDogLab development board, equipp
 
 ## License
 This project is licensed under the MIT License.
+
+
+# Demandas
+- Ajustar ultima requisição http
+- Criar interface para "Network Info"
+- Ajustar ícones pertinentes
+- Enviar dados para a núvem

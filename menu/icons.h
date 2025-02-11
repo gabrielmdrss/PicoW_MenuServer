@@ -3,47 +3,47 @@
 
 /******************************************************************************
  * @file    icons.h
- * @brief   File containing definitions and arrays for the
- *          menu visualization.
+ * @brief   Arquivo contendo definições e arrays para a
+ *          visualização do menu.
  *
  * @authors  Gabriel Domingos de Medeiros
- * @date    February 2025
+ * @date    Fevereiro 2025
  * @version 1.0.0
  *
- * @note    This file includes the necessary definitions and constants
- *          for the diplay ssd1306 visualization.
+ * @note    Este arquivo inclui as definições e constantes necessárias
+ *          para a visualização do display ssd1306.
  ******************************************************************************/
 
 
-// --------------------- Menu and Item Selection Variables ---------------------
+// --------------------- Variáveis de Seleção de Menu e Itens ---------------------
 
 /**
- * @brief Defines for menu item configuration.
+ * @brief Definições para configuração de itens do menu.
  *
- * These variables and constants manage the number of items in the menu, the item
- * names, and the selection process within the menu. The screen navigation and cursor
- * management are also handled through these variables.
+ * Essas variáveis e constantes gerenciam o número de itens no menu, os nomes dos itens
+ * e o processo de seleção dentro do menu. A navegação na tela e o gerenciamento do cursor
+ * também são tratados através dessas variáveis.
  */
-#define NUM_ITEMS  4          ///< Total number of items in the menu, also used for the number of screenshots and QR codes.
-#define MAX_ITEM_LENGTH  20   ///< Maximum length of characters allowed for each item name.
+#define NUM_ITEMS  4          ///< Número total de itens no menu, também usado para o número de capturas de tela e códigos QR.
+#define MAX_ITEM_LENGTH  20   ///< Comprimento máximo de caracteres permitido para cada nome de item.
 
-int item_selected = 0;         ///< Current item selected in the menu.
-int item_sel_previous;         ///< Previous item index, used to display the item before the selected one.
-int item_sel_next;             ///< Next item index, used to display the item after the selected one.
-int current_screen = 0;        ///< Indicates the current screen index being displayed.
-int cursor = 0;                ///< Position of the cursor in the menu for navigation.
-int button_enter_clicked = 0; // only perform action when ENTER button is clicked, and wait until another press
-int up_clicked = 0; // only perform action when button is clicked, and wait until another press
-int down_clicked = 0; // same as above
+int item_selected = 0;         ///< Item atual selecionado no menu.
+int item_sel_previous;         ///< Índice do item anterior, usado para exibir o item antes do selecionado.
+int item_sel_next;             ///< Índice do próximo item, usado para exibir o item após o selecionado.
+int current_screen = 0;        ///< Indica o índice da tela atual sendo exibida.
+int cursor = 0;                ///< Posição do cursor no menu para navegação.
+int button_enter_clicked = 0; // só executa ação quando o botão ENTER é clicado, e espera até outro clique
+int up_clicked = 0; // só executa ação quando o botão é clicado, e espera até outro clique
+int down_clicked = 0; // mesmo que acima
 
 
-// ---------------------- Bitmap Icon Variables -----------------------
+// ---------------------- Variáveis de Ícones Bitmap -----------------------
 
 /**
- * @brief Bitmap data for the dashboard icon.
+ * @brief Dados do bitmap para o ícone do painel.
  *
- * This array contains the pixel data for the dashboard icon, represented in hexadecimal format.
- * The data will be used to display the icon on the screen in the application.
+ * Este array contém os dados de pixels para o ícone do painel, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela na aplicação.
  */
 const unsigned char bitmap_icon_dashboard [] = {
   0x07, 0xe0, 0x18, 0x18, 0x21, 0x24, 0x50, 0x02, 0x48, 0x0a, 0x84, 0x01, 0x83, 0x81, 0xa2, 0x45,
@@ -51,10 +51,10 @@ const unsigned char bitmap_icon_dashboard [] = {
 };
 
 /**
- * @brief Bitmap data for the park sensor icon.
+ * @brief Dados do bitmap para o ícone do sensor de estacionamento.
  *
- * This array contains the pixel data for the park sensor icon, represented in hexadecimal format.
- * The data will be used to display the icon on the screen in the application.
+ * Este array contém os dados de pixels para o ícone do sensor de estacionamento, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela na aplicação.
  */
 const unsigned char bitmap_icon_parksensor [] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x44, 0x00, 0xA4, 0x00,
@@ -62,10 +62,10 @@ const unsigned char bitmap_icon_parksensor [] = {
   0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
 
 /**
- * @brief Bitmap data for the fireworks icon.
+ * @brief Dados do bitmap para o ícone de fogos de artifício.
  *
- * This array contains the pixel data for the fireworks icon, represented in hexadecimal format.
- * The data will be used to display the icon on the screen in the application.
+ * Este array contém os dados de pixels para o ícone de fogos de artifício, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela na aplicação.
  */
 const unsigned char bitmap_icon_fireworks [] = {
   0x00, 0x00, 0x00, 0x08, 0x00, 0x94, 0x10, 0x08, 0x10, 0x00, 0x6c, 0x00, 0x10, 0x10, 0x10, 0x10,
@@ -73,10 +73,10 @@ const unsigned char bitmap_icon_fireworks [] = {
 };
 
 /**
- * @brief Bitmap data for the battery icon.
+ * @brief Dados do bitmap para o ícone da bateria.
  *
- * This array contains the pixel data for the battery icon, represented in hexadecimal format.
- * The data will be used to display the icon on the screen in the application.
+ * Este array contém os dados de pixels para o ícone da bateria, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela na aplicação.
  */
 const unsigned char bitmap_icon_battery [] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xf8, 0x40, 0x04, 0x5b, 0x66, 0x5b, 0x66,
@@ -84,10 +84,10 @@ const unsigned char bitmap_icon_battery [] = {
 };
 
 /**
- * @brief Bitmap data for the scrollbar background icon.
+ * @brief Dados do bitmap para o ícone de fundo da barra de rolagem.
  *
- * This array contains the pixel data for the scrollbar background icon, represented in hexadecimal format.
- * The data will be used to display the background of a scrollbar on the screen in the application.
+ * Este array contém os dados de pixels para o ícone de fundo da barra de rolagem, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o fundo de uma barra de rolagem na tela na aplicação.
  */
 const unsigned char bitmap_scrollbar_background [] = {
   0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02,
@@ -97,23 +97,23 @@ const unsigned char bitmap_scrollbar_background [] = {
 };
 
 /**
- * @brief Array of pointers to bitmap icons.
+ * @brief Array de ponteiros para ícones bitmap.
  *
- * This array contains pointers to different bitmap icons. It is used to access the icon data for various
- * screen displays within the application.
+ * Este array contém ponteiros para diferentes ícones bitmap. Ele é usado para acessar os dados dos ícones para várias
+ * exibições de tela dentro da aplicação.
  */
 const unsigned char* bitmap_icons[4] = {
-  bitmap_icon_dashboard,    // Pointer to the dashboard icon.
-  bitmap_icon_parksensor,   // Pointer to the park sensor icon.
-  bitmap_icon_fireworks,    // Pointer to the fireworks icon.
-  bitmap_icon_battery       // Pointer to the battery icon.
+  bitmap_icon_dashboard,    // Ponteiro para o ícone do painel.
+  bitmap_icon_parksensor,   // Ponteiro para o ícone do sensor de estacionamento.
+  bitmap_icon_fireworks,    // Ponteiro para o ícone de fogos de artifício.
+  bitmap_icon_battery       // Ponteiro para o ícone da bateria.
 };
 
 /**
- * @brief Bitmap data for the box of the selected item
+ * @brief Dados do bitmap para a caixa do item selecionado
  *
- * This array contains pointers to different bitmap icons. It is used to access the icon data for various
- * screen displays within the application.
+ * Este array contém ponteiros para diferentes ícones bitmap. Ele é usado para acessar os dados dos ícones para várias
+ * exibições de tela dentro da aplicação.
  */
 const unsigned char bitmap_item_sel_outline [] = {
   0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0,
@@ -140,16 +140,16 @@ const unsigned char bitmap_item_sel_outline [] = {
 };
 
 /**
- * @brief Array of the bitmap icons titles.
+ * @brief Array dos títulos dos ícones bitmap.
  *
- * This array contains pointers to different bitmap icons. It is used to access the icon data for various
- * screen displays within the application.
+ * Este array contém ponteiros para diferentes ícones bitmap. Ele é usado para acessar os dados dos ícones para várias
+ * exibições de tela dentro da aplicação.
  */
-char menu_items [NUM_ITEMS] [MAX_ITEM_LENGTH] = {  // array with item names
+char menu_items [NUM_ITEMS] [MAX_ITEM_LENGTH] = {  // array com nomes dos itens
   {"Web Server"},
   {"MQTT"},
   {"Buzzer"},
-  {"Calibration"}
+  {"Network Info"}
  };
 
 #endif /*ICONS_H*/

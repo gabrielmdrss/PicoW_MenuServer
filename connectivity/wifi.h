@@ -3,44 +3,44 @@
 
 /******************************************************************************
  * @file    wifi.h
- * @brief   File containing definitions and function prototypes for the
- *          Web Server application hosted on the Raspberry Pi Pico W.
+ * @brief   Arquivo contendo definições e protótipos de funções para a
+ *          aplicação de Servidor Web hospedada no Raspberry Pi Pico W.
  *
  * @authors Gabriel Domingos de Medeiros
- * @date    February 2025
+ * @date    Fevereiro 2025
  * @version 1.0.0
  *
- * @note    This file includes the necessary definitions, constants, and function
- *          prototypes for the application.
+ * @note    Este arquivo inclui as definições, constantes e protótipos de funções
+ *          necessários para a aplicação.
  ******************************************************************************/
 
 // ---------------------------------- Includes ---------------------------------
 
-#include "pico/cyw43_arch.h"      // Library for using the connectivity module for raspberry pi pico w.
-#include "lwip/tcp.h"             // TCP Function Library
-#include "lwip/apps/httpd.h"      // Library of functions for HTTP protocol
-#include "mqtt_utility.h"         // File containing useful functions for MQTT communication
+#include "pico/cyw43_arch.h"      // Biblioteca para usar o módulo de conectividade para raspberry pi pico w.
+#include "lwip/tcp.h"             // Biblioteca de Funções TCP
+#include "lwip/apps/httpd.h"      // Biblioteca de funções para o protocolo HTTP
+#include "mqtt_utility.h"         // Arquivo contendo funções úteis para comunicação MQTT
 
 
 // ----------------------------------- Defines ----------------------------------
 
-#define BUTTON_A_PIN 5            // Pin number used in Button A.
+#define BUTTON_A_PIN 5            // Número do pino usado no Botão A.
 
 /**
- * @brief HTTP response template for the server.
+ * @brief Modelo de resposta HTTP para o servidor.
  *
- * This define holds a preformatted HTTP response string, including headers and HTML content.
- * It is dynamically populated with the current button state (`%s`) before being sent to the client.
+ * Este define contém uma string de resposta HTTP pré-formatada, incluindo cabeçalhos e conteúdo HTML.
+ * Ela é dinamicamente populada com o estado atual do botão (`%s`) antes de ser enviada ao cliente.
  *
  * @details:
- * - HTML/CSS styling for a simple web interface.
- * - Includes buttons for LED ON and OFF functionality.
- * - Displays the current button state dynamically in the response.
- * - Auto-refresh feature for real-time updates.
+ * - Estilização HTML/CSS para uma interface web simples.
+ * - Inclui botões para funcionalidade de LIGAR e DESLIGAR LED.
+ * - Exibe o estado atual do botão dinamicamente na resposta.
+ * - Recurso de atualização automática para atualizações em tempo real.
  *
  * @example:
- * When the button state is "Button is pressioned", the response dynamically updates
- * to reflect the status in the `<p>` tag of the HTML content.
+ * Quando o estado do botão é "Button is pressioned", a resposta é atualizada dinamicamente
+ * para refletir o status na tag `<p>` do conteúdo HTML.
  */
 #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" \
                       "<!DOCTYPE html><html>" \
@@ -65,63 +65,62 @@
                       "</head>" \
                       "<body>" \
                       "<div class=\"container\">" \
-                      "<h1>Control LED</h1>" \
+                      "<h1>Controlar LED</h1>" \
                       "<form>" \
-                      "<button class=\"button red\" name=\"led\" value=\"red\" type=\"submit\">Red</button>" \
-                      "<button class=\"button green\" name=\"led\" value=\"green\" type=\"submit\">Green</button>" \
-                      "<button class=\"button blue\" name=\"led\" value=\"blue\" type=\"submit\">Blue</button>" \
-                      "<button class=\"button purple\" name=\"led\" value=\"purple\" type=\"submit\">Purple</button>" \
-                      "<button class=\"button off\" name=\"led\" value=\"off\" type=\"submit\">Turn Off</button>" \
+                      "<button class=\"button red\" name=\"led\" value=\"red\" type=\"submit\">Vermelho</button>" \
+                      "<button class=\"button green\" name=\"led\" value=\"green\" type=\"submit\">Verde</button>" \
+                      "<button class=\"button blue\" name=\"led\" value=\"blue\" type=\"submit\">Azul</button>" \
+                      "<button class=\"button purple\" name=\"led\" value=\"purple\" type=\"submit\">Roxo</button>" \
+                      "<button class=\"button off\" name=\"led\" value=\"off\" type=\"submit\">Desligar</button>" \
                       "</form>" \
-                      "<p>Brightness:</p>" \
+                      "<p>Brilho:</p>" \
                       "<form>" \
                       "<input type='range' min='0' max='255' value='%s' name='brightness'>" \
-                      "<br><button class=\"button brightness\" type='submit'>Set Brightness</button>" \
+                      "<br><button class=\"button brightness\" type='submit'>Definir Brilho</button>" \
                       "</form>" \
                       "</div>" \
                       "</body></html>\r\n"
 
 
-// ---------------------------------- Variables ---------------------------------
+// ---------------------------------- Variáveis ---------------------------------
 
-char http_response[2048];         // The content of the HTTP response that will be sent to the client.
-const char *button_state = "Button is not pressioned"; // String that holds the current state of the button.
-int start_wifi = 0;              // Integer that acts as a flag to indicate if Wi-Fi initialization started.
-char * current_request = "none"; // This string holds the value of the current HTTP request being processed.
-static int brightness = 128;     // The initial brightness value for the LED.
+char http_response[2048];         // O conteúdo da resposta HTTP que será enviada ao cliente.
+int start_wifi = 0;              // Inteiro que atua como uma flag para indicar se a inicialização do Wi-Fi começou.
+char * current_request = "none"; // Esta string contém o valor da solicitação HTTP atual sendo processada.
+static int brightness = 128;     // O valor inicial de brilho para o LED.
 static int last_red = 0, last_green = 0, last_blue = 0;  // Armazena a última cor
 
 
-// ---------------------------------- Functions ---------------------------------
+// ---------------------------------- Funções ---------------------------------
 
-// --------------------------- Http Callback Function ---------------------------
+// --------------------------- Função de Callback HTTP ---------------------------
 
 /**
- * @brief Processes incoming HTTP requests and handles LED control commands.
+ * @brief Processa solicitações HTTP recebidas e lida com comandos de controle do LED.
  *
- * @param arg A pointer to user-defined data passed to the callback (unused).
- * @param tpcb A pointer to the TCP Protocol Control Block (PCB) for the connection.
- * @param p A pointer to the buffer containing the HTTP request payload.
- * @param err The error status of the incoming data.
- * @return err_t Returns `ERR_OK` on success or an appropriate error code.
+ * @param arg Um ponteiro para dados definidos pelo usuário passados para o callback (não utilizado).
+ * @param tpcb Um ponteiro para o Bloco de Controle de Protocolo TCP (PCB) para a conexão.
+ * @param p Um ponteiro para o buffer contendo o payload da solicitação HTTP.
+ * @param err O status de erro dos dados recebidos.
+ * @return err_t Retorna `ERR_OK` em caso de sucesso ou um código de erro apropriado.
  *
- * This function processes HTTP requests received by the server. It checks for specific
- * commands in the request to control an LED (e.g., turning it ON or OFF). If a recognized
- * command is found, the function updates the LED's state accordingly. The response is then
- * generated dynamically based on the current button state and sent back to the client. 
- * Finally, the received buffer is freed, and the TCP connection is maintained.
+ * Esta função processa solicitações HTTP recebidas pelo servidor. Ela verifica comandos específicos
+ * na solicitação para controlar um LED (por exemplo, ligá-lo ou desligá-lo). Se um comando reconhecido
+ * for encontrado, a função atualiza o estado do LED de acordo. A resposta é então gerada dinamicamente
+ * com base no estado atual do botão e enviada de volta ao cliente. Finalmente, o buffer recebido é liberado,
+ * e a conexão TCP é mantida.
  *
- * ### Behavior:
- * - If the client closes the connection (`p == NULL`), the server closes the TCP connection.
- * - Recognizes the following HTTP commands:
- *   - `"GET /?led=on"`: Turns the LED on with maximum brightness.
- *   - `"GET /?led=off"`: Turns the LED off.
- * - Replaces the `%s` placeholder in the HTTP response template with the current button state.
- * - Sends the generated HTTP response back to the client.
+ * ### Comportamento:
+ * - Se o cliente fechar a conexão (`p == NULL`), o servidor fecha a conexão TCP.
+ * - Reconhece os seguintes comandos HTTP:
+ *   - `"GET /?led=on"`: Liga o LED com brilho máximo.
+ *   - `"GET /?led=off"`: Desliga o LED.
+ * - Substitui o espaço reservado `%s` no modelo de resposta HTTP com o estado atual do botão.
+ * - Envia a resposta HTTP gerada de volta ao cliente.
  *
- * @note This function is invoked automatically when new data is received by the server
- *   (callback registered in `connection_callback`).
- * @note Ensures proper memory management by freeing the received buffer after processing.
+ * @note Esta função é invocada automaticamente quando novos dados são recebidos pelo servidor
+ *   (callback registrado em `connection_callback`).
+ * @note Garante o gerenciamento adequado da memória liberando o buffer recebido após o processamento.
  */
 static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     
@@ -170,7 +169,7 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
         brightness = strtol(brightness_value, NULL, 10);
     }
 
-    printf("brightness: %d\n", brightness);
+    printf("Brilho: %d\n", brightness);
 
     // Aplicar brilho à cor do LED
     pwm_set_gpio_level(LED_RED_PIN, (red * brightness) / 255);
@@ -190,104 +189,103 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
 }
 
 
-// --------------------------- Connection Callback Function ---------------------------
+// --------------------------- Função de Callback de Conexão ---------------------------
 
 /**
- * @brief Handles new incoming TCP connections and sets up the HTTP callback.
+ * @brief Lida com novas conexões TCP recebidas e configura o callback HTTP.
  *
- * @param arg A pointer to user-defined data passed to the callback (unused).
- * @param newpcb A pointer to the new TCP Protocol Control Block (PCB) representing the connection.
- * @param err The error status of the incoming connection.
- * @return err_t Returns `ERR_OK` on success or an appropriate error code.
+ * @param arg Um ponteiro para dados definidos pelo usuário passados para o callback (não utilizado).
+ * @param newpcb Um ponteiro para o novo Bloco de Controle de Protocolo TCP (PCB) representando a conexão.
+ * @param err O status de erro da conexão recebida.
+ * @return err_t Retorna `ERR_OK` em caso de sucesso ou um código de erro apropriado.
  *
- * This function is triggered whenever a new TCP connection is established with the server.
- * It associates the `http_callback` function to handle incoming data for the connection.
- * Optionally, it can register a polling function (e.g., `update_server`) for periodic server updates.
+ * Esta função é acionada sempre que uma nova conexão TCP é estabelecida com o servidor.
+ * Ela associa a função `http_callback` para lidar com dados recebidos na conexão.
+ * Opcionalmente, pode registrar uma função de polling (por exemplo, `update_server`) para atualizações periódicas do servidor.
  *
- * ### Behavior:
- * - Registers the `http_callback` function to handle incoming HTTP requests on the connection.
- * - Optionally supports polling by enabling the `tcp_poll` function (commented in the code).
- * - Does not manage connection closing or cleanup directly; this is handled by other mechanisms.
+ * ### Comportamento:
+ * - Registra a função `http_callback` para lidar com solicitações HTTP recebidas na conexão.
+ * - Opcionalmente, suporta polling habilitando a função `tcp_poll` (comentada no código).
+ * - Não gerencia diretamente o fechamento ou limpeza da conexão; isso é tratado por outros mecanismos.
  *
- * ### Notes:
- * @note The callback function `http_callback` is invoked when new data is received for the connection.
- * @note This function is designed to work in conjunction with the lwIP TCP/IP stack.
+ * ### Notas:
+ * @note A função de callback `http_callback` é invocada quando novos dados são recebidos para a conexão.
+ * @note Esta função é projetada para funcionar em conjunto com a pilha TCP/IP lwIP.
  */
 static err_t connection_callback(void *arg, struct tcp_pcb *newpcb, err_t err) {
-    tcp_recv(newpcb, http_callback);  // Associates the HTTP callback
+    tcp_recv(newpcb, http_callback);  // Associa o callback HTTP
     //tcp_poll(newpcb, update_server, 100);
     return ERR_OK;
 }
 
 
-// --------------------------- Shutdown TCP Server Function ---------------------------
+// --------------------------- Função de Desligamento do Servidor TCP ---------------------------
 
 /**
- * @brief Shuts down the TCP server and releases resources.
+ * @brief Desliga o servidor TCP e libera recursos.
  *
- * @param server_state A pointer to the `TCP_SERVER_T` structure representing the server state.
+ * @param server_state Um ponteiro para a estrutura `TCP_SERVER_T` representando o estado do servidor.
  *
- * This function gracefully shuts down the TCP server by closing all active connections,
- * releasing the occupied port, and freeing any dynamically allocated memory associated
- * with the server state.
+ * Esta função desliga graciosamente o servidor TCP fechando todas as conexões ativas,
+ * liberando a porta ocupada e liberando qualquer memória dinamicamente alocada associada
+ * ao estado do servidor.
  *
- * ### Behavior:
- * - Closes all active connections by invoking `tcp_server_close`.
- * - Frees the memory allocated for the `TCP_SERVER_T` structure.
- * - Prints a debug message indicating the server has been shut down and the port is released.
+ * ### Comportamento:
+ * - Fecha todas as conexões ativas invocando `tcp_server_close`.
+ * - Libera a memória alocada para a estrutura `TCP_SERVER_T`.
+ * - Imprime uma mensagem de depuração indicando que o servidor foi desligado e a porta foi liberada.
  *
- * @note Ensure that no ongoing operations depend on the server state before invoking this function.
- * @note The server state should be properly initialized before calling this function.
+ * @note Certifique-se de que nenhuma operação em andamento dependa do estado do servidor antes de invocar esta função.
+ * @note O estado do servidor deve ser devidamente inicializado antes de chamar esta função.
  */
 void shutdown_tcp_server(TCP_SERVER_T *server_state) {
     if (server_state) {
         tcp_server_close(server_state);
         free(server_state);
     }
-    DEBUG_printf("TCP server closed and port 80 released.\n");
+    DEBUG_printf("Servidor TCP fechado e porta 80 liberada.\n");
 }
 
 
-// --------------------------- TCP Server Setup Function ---------------------------
+// --------------------------- Função de Configuração do Servidor TCP ---------------------------
 
 /**
- * @brief Initializes and starts the HTTP server on port 80.
+ * @brief Inicializa e inicia o servidor HTTP na porta 80.
  *
- * This function sets up the TCP server by creating a Protocol Control Block (PCB),
- * binding it to port 80, and putting it in listening mode. It also associates the
- * `connection_callback` function to handle incoming client connections.
+ * Esta função configura o servidor TCP criando um Bloco de Controle de Protocolo (PCB),
+ * vinculando-o à porta 80 e colocando-o em modo de escuta. Ela também associa a função
+ * `connection_callback` para lidar com conexões de clientes recebidas.
  *
- * ### Behavior:
- * - Creates a new TCP PCB using `tcp_new`.
- * - Binds the server to port 80 on all available network interfaces.
- * - Puts the PCB in listening mode to accept incoming connections.
- * - Associates the `connection_callback` function to manage new client connections.
- * - Prints status messages indicating success or errors during setup.
+ * ### Comportamento:
+ * - Cria um novo PCB TCP usando `tcp_new`.
+ * - Vincula o servidor à porta 80 em todas as interfaces de rede disponíveis.
+ * - Coloca o PCB em modo de escuta para aceitar conexões recebidas.
+ * - Associa a função `connection_callback` para gerenciar novas conexões de clientes.
+ * - Imprime mensagens de status indicando sucesso ou erros durante a configuração.
  *
- *
- * @note If PCB creation or port binding fails, the function prints an error message
- *   and exits without completing the server setup.
- * @note This function is designed for use with the lwIP TCP/IP stack.
+ * @note Se a criação do PCB ou a vinculação da porta falhar, a função imprime uma mensagem de erro
+ *   e sai sem concluir a configuração do servidor.
+ * @note Esta função é projetada para uso com a pilha TCP/IP lwIP.
  */
 static void start_http_server(void) {
 
-    // Creating a new TCP Protocol Control Structure (PCB)
+    // Criando uma nova Estrutura de Controle de Protocolo TCP (PCB)
     struct tcp_pcb *pcb = tcp_new();
     if (!pcb) {
-        printf("Error creating PCB\n");
+        printf("Erro ao criar PCB\n");
         return;
     }
 
-    // Connect the server to port 80
+    // Conectar o servidor à porta 80
     if (tcp_bind(pcb, IP_ADDR_ANY, 80) != ERR_OK) {
-        printf("Error connecting to server on port 80\n");
+        printf("Erro ao conectar ao servidor na porta 80\n");
         return;
     }
 
-    pcb = tcp_listen(pcb);  // Puts the PCB in listening mode
-    tcp_accept(pcb, connection_callback);  // Associates the connection callback
+    pcb = tcp_listen(pcb);  // Coloca o PCB em modo de escuta
+    tcp_accept(pcb, connection_callback);  // Associa o callback de conexão
 
-    printf("HTTP server running on port 80...\n");
+    printf("Servidor HTTP em execução na porta 80...\n");
 }
 
 #endif /* WIFI_H */

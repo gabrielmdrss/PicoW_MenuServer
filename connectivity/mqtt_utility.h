@@ -3,43 +3,43 @@
 
 /******************************************************************************
  * @file    mqtt_utility.h
- * @brief   File containing definitions and function prototypes for the
- *          application of  a MQTT communication connected to a local broker
- *          on the Raspberry Pi Pico W.
+ * @brief   Arquivo contendo definições e protótipos de funções para a
+ *          aplicação de comunicação MQTT conectada a um broker local
+ *          no Raspberry Pi Pico W.
  *
  * @authors Gabriel Domingos de Medeiros
- * @date    February 2025
+ * @date    Fevereiro 2025
  * @version 1.0.0
  *
- * @note    This file includes the necessary definitions, constants, and function
- *          prototypes for the application.
+ * @note    Este arquivo inclui as definições, constantes e protótipos de funções
+ *          necessários para a aplicação.
  ******************************************************************************/
 
 // ---------------------------------- Includes ---------------------------------
 
-#include <string.h>         // Standard library for string operations.
-#include "pico/stdlib.h"    // Standard library for Raspberry Pi Pico.
-#include "pico/cyw43_arch.h"// Library for using the connectivity module for Raspberry Pi Pico W.
-#include "lwip/apps/mqtt.h" // MQTT library for handling MQTT protocol.
-#include "hardware/adc.h"   // Library for ADC (Analog-to-Digital Converter) operations.
-#include "hardware/pwm.h"   // Library for PWM (Pulse Width Modulation) operations.
-#include "math.h"           // Math library for mathematical operations.
-#include "bsp/board.h"      // Board support package for hardware abstraction.
-#include "pico/binary_info.h"// Library for binary information.
+#include <string.h>         // Biblioteca padrão para operações com strings.
+#include "pico/stdlib.h"    // Biblioteca padrão para Raspberry Pi Pico.
+#include "pico/cyw43_arch.h"// Biblioteca para usar o módulo de conectividade para Raspberry Pi Pico W.
+#include "lwip/apps/mqtt.h" // Biblioteca MQTT para lidar com o protocolo MQTT.
+#include "hardware/adc.h"   // Biblioteca para operações com ADC (Conversor Analógico-Digital).
+#include "hardware/pwm.h"   // Biblioteca para operações com PWM (Modulação por Largura de Pulso).
+#include "math.h"           // Biblioteca matemática para operações matemáticas.
+#include "bsp/board.h"      // Pacote de suporte à placa para abstração de hardware.
+#include "pico/binary_info.h"// Biblioteca para informações binárias.
 
 
 // ----------------------------------- Defines ----------------------------------
 
-#define LED_RED_PIN 13      // Pin number for the red LED.
-#define LED_GREEN_PIN 11    // Pin number for the green LED.
-#define LED_BLUE_PIN 12     // Pin number for the blue LED.
+#define LED_RED_PIN 13      // Número do pino para o LED vermelho.
+#define LED_GREEN_PIN 11    // Número do pino para o LED verde.
+#define LED_BLUE_PIN 12     // Número do pino para o LED azul.
 
-#define MQTT_SERVER "10.220.0.83" // MQTT server address (local broker).
-#define SUBS_STR_NAME "LED/TPC"   // MQTT topic for subscribing to LED control messages.
-#define PUBLISH_STR_NAME "TEMP/TPC" // MQTT topic for publishing temperature data.
+#define MQTT_SERVER "10.220.0.83" // Endereço do servidor MQTT (broker local).
+#define SUBS_STR_NAME "LED/TPC"   // Tópico MQTT para assinar mensagens de controle do LED.
+#define PUBLISH_STR_NAME "TEMP/TPC" // Tópico MQTT para publicar dados de temperatura.
 
-/* Choose 'C' for Celsius or 'F' for Fahrenheit. */
-#define TEMPERATURE_UNITS 'C'     // Unit for temperature measurement.
+/* Escolha 'C' para Celsius ou 'F' para Fahrenheit. */
+#define TEMPERATURE_UNITS 'C'     // Unidade para medição de temperatura.
 
 struct mqtt_connect_client_info_t mqtt_client_info = {
     "<RA>/pico_w", /* client id */
@@ -56,14 +56,14 @@ struct mqtt_connect_client_info_t mqtt_client_info = {
 };
 
 
-// ---------------------------------- Variables ---------------------------------
+// ---------------------------------- Variáveis ---------------------------------
 
-char tempString[12];    // String containing the converted value of the internal temperature
-int cont_envio;         // Counter that will dictate the speed at which the temperature is sent to the Broker
-char last_led[32] = ""; // Global declaration
+char tempString[12];    // String contendo o valor convertido da temperatura interna
+int cont_envio;         // Contador que ditará a velocidade com que a temperatura é enviada ao Broker
+char last_led[32] = ""; // Declaração global
 
 
-// ---------------------------------- Functions ---------------------------------
+// ----------------------------------- Funções ----------------------------------
 
 static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags);
 static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len);
@@ -76,172 +76,172 @@ int intToStr(int x, char str[], int d);
 void reverse(char* str, int len);
 
 
-// -------------------------- Callback Incoming Data Function -------------------------
+// -------------------------- Função de Callback de Dados Recebidos -------------------------
 
 /**
- * @brief Callback function for incoming MQTT data.
+ * @brief Função de callback para dados MQTT recebidos.
  *
- * @param arg User-defined argument (unused).
- * @param data Pointer to the incoming data.
- * @param len Length of the incoming data.
- * @param flags Flags indicating the status of the incoming data.
+ * @param arg Argumento definido pelo usuário (não utilizado).
+ * @param data Ponteiro para os dados recebidos.
+ * @param len Comprimento dos dados recebidos.
+ * @param flags Flags indicando o status dos dados recebidos.
  *
- * This function is called when data is received on a subscribed MQTT topic.
- * It processes the data and adjusts the LED colors accordingly.
+ * Esta função é chamada quando dados são recebidos em um tópico MQTT assinado.
+ * Ela processa os dados e ajusta as cores do LED de acordo.
  *
- * ### Behavior:
- * - Converts the incoming data to a string.
- * - Parses the string to extract RGB values.
- * - Adjusts the LED colors based on the parsed values.
- * - Ensures the RGB values are within the valid range (0-255).
- * - Updates the global `last_led` variable with the received message.
+ * ### Comportamento:
+ * - Converte os dados recebidos em uma string.
+ * - Analisa a string para extrair valores RGB.
+ * - Ajusta as cores do LED com base nos valores analisados.
+ * - Garante que os valores RGB estejam dentro do intervalo válido (0-255).
+ * - Atualiza a variável global `last_led` com a mensagem recebida.
  *
- * @note The data should be in the format "R/G/B" where R, G, and B are integers.
- * @note If the data format is invalid, an error message is printed.
+ * @note Os dados devem estar no formato "R/G/B", onde R, G e B são inteiros.
+ * @note Se o formato dos dados for inválido, uma mensagem de erro é impressa.
  */
 static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags) {
-    printf("Message received: %.*s\n", len, data);
+    printf("Mensagem recebida: %.*s\n", len, data);
 
-    // Converts the message to a string
+    // Converte a mensagem para uma string
     char message[32];
     strncpy(message, (char *)data, len);
     message[len] = '\0';
 
-    // Variables to store R, G and B values
+    // Variáveis para armazenar os valores R, G e B
     int red, green, blue;
 
-    // Parse message in R/G/B format
+    // Analisa a mensagem no formato R/G/B
     if (sscanf(message, "%d/%d/%d", &red, &green, &blue) == 3) {
-        // Ensures values ​​are between 0 and 255
+        // Garante que os valores estejam entre 0 e 255
         red = red < 0 ? 0 : (red > 255 ? 255 : red);
         green = green < 0 ? 0 : (green > 255 ? 255 : green);
         blue = blue < 0 ? 0 : (blue > 255 ? 255 : blue);
 
         // printf("R = %d, G = %d, B = %d\n", red, green, blue);
 
-        // Converts values ​​to PWM (0-255 to 0-100% duty cycle)
+        // Converte os valores para PWM (0-255 para 0-100% ciclo de trabalho)
         pwm_set_gpio_level(LED_RED_PIN, red);
         pwm_set_gpio_level(LED_GREEN_PIN, green);
         pwm_set_gpio_level(LED_BLUE_PIN, blue);
 
-        printf("LED adjusted for: R=%d, G=%d, B=%d\n", red, green, blue);
+        printf("LED ajustado para: R=%d, G=%d, B=%d\n", red, green, blue);
 
         strncpy(last_led, message, sizeof(last_led) - 1);
-        last_led[sizeof(last_led) - 1] = '\0'; // Ensures string termination
+        last_led[sizeof(last_led) - 1] = '\0'; // Garante a terminação da string
 
-        printf("Message copied to last_led: %s\n", message);
+        printf("Mensagem copiada para last_led: %s\n", message);
 
-        printf("Value of last_led: %s\n", last_led);
-
+        printf("Valor de last_led: %s\n", last_led);
 
     } else {
-        printf("Invalid message! Use the format R/G/B.\n");
+        printf("Mensagem inválida! Use o formato R/G/B.\n");
     }
 }
 
 
-// --------------------------- Callback Incoming Publish Function ---------------------------
+// --------------------------- Função de Callback de Publicação Recebida ---------------------------
 
 /**
- * @brief Callback function for incoming MQTT publish messages.
+ * @brief Função de callback para mensagens de publicação MQTT recebidas.
  *
- * @param arg User-defined argument (unused).
- * @param topic The topic of the incoming message.
- * @param tot_len Total length of the incoming message.
+ * @param arg Argumento definido pelo usuário (não utilizado).
+ * @param topic O tópico da mensagem recebida.
+ * @param tot_len Comprimento total da mensagem recebida.
  *
- * This function is called when a message is published to a subscribed MQTT topic.
- * It prints the received topic.
+ * Esta função é chamada quando uma mensagem é publicada em um tópico MQTT assinado.
+ * Ela imprime o tópico recebido.
  *
- * ### Behavior:
- * - Prints the topic of the received message.
+ * ### Comportamento:
+ * - Imprime o tópico da mensagem recebida.
  *
- * @note This function does not process the message payload.
+ * @note Esta função não processa o payload da mensagem.
  */
 static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len) {
-    printf("Topic received: %s\n", topic);
+    printf("Tópico recebido: %s\n", topic);
 }
 
-// --------------------------- Callback Request Function ---------------------------
+
+// --------------------------- Função de Callback de Requisição ---------------------------
 
 /**
- * @brief Callback function for MQTT requests.
+ * @brief Função de callback para requisições MQTT.
  *
- * @param arg User-defined argument (unused).
- * @param err Error status of the request.
+ * @param arg Argumento definido pelo usuário (não utilizado).
+ * @param err Status de erro da requisição.
  *
- * This function is called when an MQTT request completes.
- * It prints the status of the request.
+ * Esta função é chamada quando uma requisição MQTT é concluída.
+ * Ela imprime o status da requisição.
  *
- * ### Behavior:
- * - Prints the error status of the completed request.
+ * ### Comportamento:
+ * - Imprime o status de erro da requisição concluída.
  *
- * @note This function is used for handling the completion of MQTT requests such as subscriptions.
+ * @note Esta função é usada para lidar com a conclusão de requisições MQTT, como assinaturas.
  */
 static void mqtt_request_cb(void *arg, err_t err) {
-    printf("MQTT request callback: err %d\n", (int)err);
+    printf("Callback de requisição MQTT: err %d\n", (int)err);
 }
 
 
-// --------------------------- Callback Connection Function ---------------------------
+// --------------------------- Função de Callback de Conexão ---------------------------
 
 /**
- * @brief Callback function for MQTT connection status.
+ * @brief Função de callback para o status da conexão MQTT.
  *
- * @param client Pointer to the MQTT client structure.
- * @param arg User-defined argument (unused).
- * @param status Connection status.
+ * @param client Ponteiro para a estrutura do cliente MQTT.
+ * @param arg Argumento definido pelo usuário (não utilizado).
+ * @param status Status da conexão.
  *
- * This function is called when the MQTT connection status changes.
- * It handles subscription to the topic upon successful connection.
+ * Esta função é chamada quando o status da conexão MQTT muda.
+ * Ela lida com a assinatura do tópico após a conexão ser aceita.
  *
- * ### Behavior:
- * - Prints the connection status.
- * - Subscribes to the specified topic if the connection is accepted.
- * - Prints success or failure message for the subscription.
+ * ### Comportamento:
+ * - Imprime o status da conexão.
+ * - Assina o tópico especificado se a conexão for aceita.
+ * - Imprime mensagem de sucesso ou falha para a assinatura.
  *
- * @note This function is invoked automatically when the connection status changes.
+ * @note Esta função é invocada automaticamente quando o status da conexão muda.
  */
 static void mqtt_connection_cb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status) {
-    printf("MQTT connection status: %d\n", (int)status);
+    printf("Status da conexão MQTT: %d\n", (int)status);
 
     if (status == MQTT_CONNECT_ACCEPTED) {
         err_t erro = mqtt_sub_unsub(client, SUBS_STR_NAME, 0, &mqtt_request_cb, NULL, 1);
         if (erro == ERR_OK) {
-            printf("Subscription to topic '%s' successful!\n", SUBS_STR_NAME);
+            printf("Assinatura do tópico '%s' bem-sucedida!\n", SUBS_STR_NAME);
         } else {
-            printf("Failed to subscribe to topic '%s'!\n", SUBS_STR_NAME);
+            printf("Falha ao assinar o tópico '%s'!\n", SUBS_STR_NAME);
         }
     } else {
-        printf("Connection rejected!\n");
+        printf("Conexão rejeitada!\n");
     }
 }
 
 
-// --------------------------- Read Onboard Temperature Function ---------------------------
+// --------------------------- Função de Leitura da Temperatura Interna ---------------------------
 
 /**
- * @brief Reads the onboard temperature sensor.
+ * @brief Lê o sensor de temperatura interno.
  *
- * @param unit The unit of temperature ('C' for Celsius, 'F' for Fahrenheit).
- * @return float The temperature in the specified unit.
+ * @param unit A unidade de temperatura ('C' para Celsius, 'F' para Fahrenheit).
+ * @return float A temperatura na unidade especificada.
  *
- * This function reads the onboard temperature sensor and returns the temperature
- * in the specified unit.
+ * Esta função lê o sensor de temperatura interno e retorna a temperatura
+ * na unidade especificada.
  *
- * ### Behavior:
- * - Enables the onboard temperature sensor.
- * - Selects the ADC input for the temperature sensor.
- * - Reads the ADC value and converts it to temperature.
- * - Returns the temperature in the specified unit.
+ * ### Comportamento:
+ * - Habilita o sensor de temperatura interno.
+ * - Seleciona a entrada ADC para o sensor de temperatura.
+ * - Lê o valor do ADC e converte para temperatura.
+ * - Retorna a temperatura na unidade especificada.
  *
- * @note The function assumes a 12-bit ADC with a reference voltage of 3.3V.
+ * @note A função assume um ADC de 12 bits com uma tensão de referência de 3.3V.
  */
 float read_onboard_temperature(const char unit) {
     
     adc_set_temp_sensor_enabled(true);
-    adc_select_input(4); // Select the internal temperature sensor
+    adc_select_input(4); // Seleciona o sensor de temperatura interno
 
-    /* 12-bit conversion, assume max value == ADC_VREF == 3.3 V */
+    /* Conversão de 12 bits, assume valor máximo == ADC_VREF == 3.3 V */
     const float conversionFactor = 3.3f / (1 << 12);
 
     float adc = (float)adc_read() * conversionFactor;
@@ -257,45 +257,45 @@ float read_onboard_temperature(const char unit) {
 }
 
 
-// --------------------------- Float to String Function ---------------------------
+// --------------------------- Função de Conversão de Float para String ---------------------------
 
 /**
- * @brief Converts a floating-point number to a string.
+ * @brief Converte um número de ponto flutuante para uma string.
  *
- * @param n The floating-point number to convert.
- * @param res The resulting string.
- * @param afterpoint Number of digits after the decimal point.
+ * @param n O número de ponto flutuante a ser convertido.
+ * @param res A string resultante.
+ * @param afterpoint Número de dígitos após o ponto decimal.
  *
- * This function converts a floating-point number to a string with the specified
- * number of digits after the decimal point.
+ * Esta função converte um número de ponto flutuante para uma string com o número
+ * especificado de dígitos após o ponto decimal.
  *
- * ### Behavior:
- * - Extracts the integer part of the number.
- * - Extracts the fractional part of the number.
- * - Converts the integer part to a string.
- * - Adds a decimal point if required.
- * - Converts the fractional part to a string.
+ * ### Comportamento:
+ * - Extrai a parte inteira do número.
+ * - Extrai a parte fracionária do número.
+ * - Converte a parte inteira para uma string.
+ * - Adiciona um ponto decimal se necessário.
+ * - Converte a parte fracionária para uma string.
  *
- * @note The resulting string is stored in the `res` parameter.
+ * @note A string resultante é armazenada no parâmetro `res`.
  */
 void ftoa(float n, char* res, int afterpoint) 
 { 
-    // Extract integer part 
+    // Extrai a parte inteira 
     int ipart = (int)n; 
  
-    // Extract floating part 
+    // Extrai a parte fracionária 
     float fpart = n - (float)ipart; 
  
-    // convert integer part to string 
+    // Converte a parte inteira para string 
     int i = intToStr(ipart, res, 0); 
  
-    // check for display option after point 
+    // Verifica se é necessário exibir a parte fracionária 
     if (afterpoint != 0) { 
-        res[i] = '.'; // add dot 
+        res[i] = '.'; // Adiciona o ponto decimal 
  
-        // Get the value of fraction part upto given no. 
-        // of points after dot. The third parameter 
-        // is needed to handle cases like 233.007 
+        // Obtém o valor da parte fracionária até o número de 
+        // pontos após o ponto decimal especificado. O terceiro parâmetro 
+        // é necessário para lidar com casos como 233.007 
         fpart = fpart * pow(10, afterpoint); 
  
         intToStr((int)fpart, res + i + 1, afterpoint); 
@@ -303,40 +303,40 @@ void ftoa(float n, char* res, int afterpoint)
 }
 
 
-// --------------------------- Integer to String Function ---------------------------
+// --------------------------- Função de Conversão de Inteiro para String ---------------------------
 
 /**
- * @brief Converts an integer to a string.
+ * @brief Converte um inteiro para uma string.
  *
- * @param x The integer to convert.
- * @param str The resulting string.
- * @param d Number of digits required in the output.
- * @return int The length of the resulting string.
+ * @param x O inteiro a ser convertido.
+ * @param str A string resultante.
+ * @param d Número de dígitos necessários na saída.
+ * @return int O comprimento da string resultante.
  *
- * This function converts an integer to a string with the specified number of digits.
- * If the number of digits is more than the number of digits in the integer, zeros
- * are added at the beginning.
+ * Esta função converte um inteiro para uma string com o número especificado de dígitos.
+ * Se o número de dígitos for maior que o número de dígitos no inteiro, zeros
+ * são adicionados no início.
  *
- * ### Behavior:
- * - Converts the integer to a string.
- * - Adds leading zeros if required.
- * - Reverses the string to get the correct order.
+ * ### Comportamento:
+ * - Converte o inteiro para uma string.
+ * - Adiciona zeros à esquerda se necessário.
+ * - Inverte a string para obter a ordem correta.
  *
- * @note The resulting string is stored in the `str` parameter.
+ * @note A string resultante é armazenada no parâmetro `str`.
  */
 int intToStr(int x, char str[], int d) 
 { 
     int i = 0; 
     if (x == 0) {
-    str[i++] = '0'; // Add the digit 0
+    str[i++] = '0'; // Adiciona o dígito 0
     }
     while (x) { 
         str[i++] = (x % 10) + '0'; 
         x = x / 10; 
     } 
  
-    // If number of digits required is more, then 
-    // add 0s at the beginning 
+    // Se o número de dígitos necessário for maior, então 
+    // adiciona zeros no início 
     while (i < d) 
         str[i++] = '0'; 
  
@@ -346,21 +346,21 @@ int intToStr(int x, char str[], int d)
 }
 
 
-// --------------------------- Reverse String Function ---------------------------
+// --------------------------- Função de Inversão de String ---------------------------
 
 /**
- * @brief Reverses a string.
+ * @brief Inverte uma string.
  *
- * @param str The string to reverse.
- * @param len The length of the string.
+ * @param str A string a ser invertida.
+ * @param len O comprimento da string.
  *
- * This function reverses the given string.
+ * Esta função inverte a string fornecida.
  *
- * ### Behavior:
- * - Swaps characters from the beginning and end of the string.
- * - Continues swapping until the middle of the string is reached.
+ * ### Comportamento:
+ * - Troca caracteres do início e do fim da string.
+ * - Continua trocando até que o meio da string seja alcançado.
  *
- * @note The reversed string is stored in the `str` parameter.
+ * @note A string invertida é armazenada no parâmetro `str`.
  */
 void reverse(char* str, int len) 
 { 
@@ -375,39 +375,39 @@ void reverse(char* str, int len)
 } 
 
 
-// --------------------------- Configure PWM Function ---------------------------
+// --------------------------- Função de Configuração do PWM ---------------------------
 
 /**
- * @brief Configures the PWM for the RGB LED.
+ * @brief Configura o PWM para o LED RGB.
  *
- * This function sets up the PWM for the RGB LED pins and initializes them to off.
+ * Esta função configura o PWM para os pinos do LED RGB e os inicializa como desligados.
  *
- * ### Behavior:
- * - Sets the GPIO function for the LED pins to PWM.
- * - Configures the PWM slices for each LED pin.
- * - Sets the PWM frequency to 1 kHz.
- * - Initializes the PWM slices.
- * - Sets the PWM wrap value to 255.
- * - Initializes the LED pins to off.
+ * ### Comportamento:
+ * - Define a função GPIO para os pinos do LED como PWM.
+ * - Configura os slices PWM para cada pino do LED.
+ * - Define a frequência PWM para 1 kHz.
+ * - Inicializa os slices PWM.
+ * - Define o valor de wrap do PWM para 255.
+ * - Inicializa os pinos do LED como desligados.
  *
- * @note This function should be called during the setup phase of the application.
+ * @note Esta função deve ser chamada durante a fase de configuração da aplicação.
  */
 void configure_pwm() {
-    // Enables PWM on RGB LED pins
+    // Habilita PWM nos pinos do LED RGB
     gpio_set_function(LED_RED_PIN, GPIO_FUNC_PWM);
     gpio_set_function(LED_GREEN_PIN, GPIO_FUNC_PWM);
     gpio_set_function(LED_BLUE_PIN, GPIO_FUNC_PWM);
 
-    // Get the PWM slices for each pin
+    // Obtém os slices PWM para cada pino
     uint slice_red = pwm_gpio_to_slice_num(LED_RED_PIN);
     uint slice_green = pwm_gpio_to_slice_num(LED_GREEN_PIN);
     uint slice_blue = pwm_gpio_to_slice_num(LED_BLUE_PIN);
 
-    // Sets PWM to 1 kHz frequency
+    // Define PWM para frequência de 1 kHz
     pwm_config config = pwm_get_default_config();
-    pwm_config_set_clkdiv(&config, 2.0f); // Adjust the clock divider
+    pwm_config_set_clkdiv(&config, 2.0f); // Ajusta o divisor de clock
 
-    // Initialize PWM on corresponding slices
+    // Inicializa PWM nos slices correspondentes
     pwm_init(slice_red, &config, true);
     pwm_init(slice_green, &config, true);
     pwm_init(slice_blue, &config, true);
@@ -417,7 +417,7 @@ void configure_pwm() {
     pwm_set_wrap(slice_blue, 255);
 
 
-    // Initialize all pins to 0 (LED off)
+    // Inicializa todos os pinos com 0 (LED desligado)
     pwm_set_gpio_level(LED_RED_PIN, 0);
     pwm_set_gpio_level(LED_GREEN_PIN, 0);
     pwm_set_gpio_level(LED_BLUE_PIN, 0);
