@@ -7,6 +7,7 @@ int main() {
     stdio_init_all();                   // Inicializa todas as funções de entrada e saída padrão
 
 /*------------------------------ Inicializando os pinos ---------------------------------*/
+
     gpio_init(BUTTON_A);                // Inicializa o pino do botão A
     gpio_init(BUTTON_B);                // Inicializa o pino do botão B
     gpio_set_dir(BUTTON_A, GPIO_IN);    // Define o pino do botão A como entrada
@@ -21,11 +22,15 @@ int main() {
     adc_gpio_init(27);                  // Inicializa o pino GPIO 27 para ADC
     pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
     configure_pwm();                    // Configura o PWM para o LED RGB
+
 /*---------------------------------------------------------------------------------------*/
 
-    ssd1306_Init();                     // Inicializa o display SSD1306
 
-/*------------------------------ Starting AP_MODE Setup ---------------------------------*/
+    ssd1306_Init();                     // Inicializa o display SSD1306
+    
+
+/*------------------------- Inicializando Setup para AP_MODE ----------------------------*/
+
     TCP_SERVER_T *state = calloc(1, sizeof(TCP_SERVER_T)); // Aloca memória para o estado do servidor TCP
     if (!state) {
         DEBUG_printf("failed to allocate state\n");
@@ -58,6 +63,7 @@ int main() {
         DEBUG_printf("failed to open server\n");
         return 1;
     }
+
 /*---------------------------------------------------------------------------------------*/
 
 // Reinitialize o Wi-Fi no modo STA
@@ -90,10 +96,10 @@ int main() {
     while (1)
     {
         if (aux_connection == 0){
-            menu(); // Renderiza o menu principal
+            menu();     // Renderiza o menu principal
         }
         else {
-            menu_ap(); // Renderiza o menu do modo AP
+            menu_ap();  // Renderiza o menu do modo AP
 
             if (id_pw_collected == 1 && aux_connection == 1) {
 
@@ -101,10 +107,10 @@ int main() {
                 dns_server_deinit(&dns_server);
                 dhcp_server_deinit(&dhcp_server);
 
-                shutdown_tcp_server(state); // Encerra o servidor TCP
+                shutdown_tcp_server(state);     // Encerra o servidor TCP
 
-                cyw43_arch_disable_ap_mode(); // Desabilita o modo AP
-                cyw43_arch_deinit(); // Libera recursos do Wi-Fi
+                cyw43_arch_disable_ap_mode();   // Desabilita o modo AP
+                cyw43_arch_deinit();            // Libera recursos do Wi-Fi
                 sleep_ms(500);
 
                 // Reinitialize o Wi-Fi no modo STA (Station)
@@ -114,7 +120,7 @@ int main() {
                 }
 
                 printf("Habilitando modo STA...\n");
-                cyw43_arch_enable_sta_mode(); // Habilita o modo STA
+                cyw43_arch_enable_sta_mode();   // Habilita o modo STA
 
                 // Tenta conectar ao Wi-Fi
                 printf("Conectando ao Wi-Fi...\n");
