@@ -61,7 +61,6 @@ mqtt_client_t *cliente_mqtt;
 int connected_mqtt;
 char *last_temp;
 
-
 //------------------------------ Variáveis do Modo AP -------------------------------
 
 char *ap_name = "PICO_W_AP";
@@ -470,7 +469,6 @@ void menu(void) {
                 else
                     ssd1306_SetCursor(36, 55);
                 ssd1306_WriteString(current_request, Font_6x8, White);
-
             }
 
             cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
@@ -583,10 +581,41 @@ void menu(void) {
 
         }
         
+        // OPÇÃO Informações da Rede
         else if (item_selected == 3){
             // Função externa para usar e amostrar a funcionalidade de calibração do sensor inercial
-            ssd1306_SetCursor(5, 30);
-            ssd1306_WriteString("CALIB", Font_11x18, White);
+            ssd1306_SetCursor(22, 1);
+            ssd1306_WriteString("NETWORK INFO: ", Font_7x10, 1);
+            ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
+            ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
+
+            char buffer_string[7];                      // Buffer para armazenar valores formatados em string
+            uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
+            sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
+            ssd1306_SetCursor(3, 25);
+            ssd1306_WriteString(buffer_string, Font_6x8, 1);
+            
+            int32_t rssi;
+            cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+            sprintf(buffer_string, "RSSI: %d dBm", rssi);
+            ssd1306_SetCursor(3, 35);
+            ssd1306_WriteString(buffer_string, Font_6x8, 1);
+
+            if(connected_mqtt){
+                ssd1306_SetCursor(3, 45);
+                ssd1306_WriteString("MQTT: CONNECTED", Font_6x8, 1);
+            } else {
+                ssd1306_SetCursor(3, 45);
+                ssd1306_WriteString("MQTT: DISCONNECTED", Font_6x8, 1);
+            }
+
+            if(start_wifi){
+                ssd1306_SetCursor(3, 55);
+                ssd1306_WriteString("WIFI: CONNECTED", Font_6x8, 1);
+            } else {
+                ssd1306_SetCursor(3, 55);
+                ssd1306_WriteString("WIFI: DISCONNECTED", Font_6x8, 1);
+            }
         }
     }
 

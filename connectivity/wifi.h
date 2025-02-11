@@ -135,17 +135,22 @@ static err_t http_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
     // Processar mudança de cor do LED
     if (strstr(request, "GET /?led=red")) {
         red = 255; green = 0; blue = 0;
+        current_request = "led=red";
     } 
     else if (strstr(request, "GET /?led=green")) {
         red = 0; green = 255; blue = 0;
+        current_request = "led=green";
     }
     else if (strstr(request, "GET /?led=blue")) {
         red = 0; green = 0; blue = 255;
+        current_request = "led=blue";
     }
     else if (strstr(request, "GET /?led=purple")) {
         red = 255; green = 0; blue = 255;
+        current_request = "led=purple";
     }
     else if (strstr(request, "GET /?led=off")) {
+        current_request = "led=off";
         red = 0; green = 0; blue = 0;
     }
 
