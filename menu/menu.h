@@ -588,33 +588,48 @@ void menu(void) {
             ssd1306_WriteString("NETWORK INFO: ", Font_7x10, 1);
             ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
             ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
+            ssd1306_DrawRectangle(28, 20, 28, 63, 1);	// Separador Vertical
 
             char buffer_string[7];                      // Buffer para armazenar valores formatados em string
             uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
-            sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-            ssd1306_SetCursor(3, 25);
+            sprintf(buffer_string, "%d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
+            ssd1306_SetCursor(3, 23);
+            ssd1306_WriteString("IP", Font_6x8, 1);
+            ssd1306_SetCursor(53, 23);
             ssd1306_WriteString(buffer_string, Font_6x8, 1);
+            ssd1306_DrawRectangle(1, 31, 127, 31, 1);	// Separador horizontal
             
             int32_t rssi;
             cyw43_wifi_get_rssi(&cyw43_state, &rssi);
-            sprintf(buffer_string, "RSSI: %d dBm", rssi);
-            ssd1306_SetCursor(3, 35);
+            sprintf(buffer_string, "%d dBm", rssi);
+            ssd1306_SetCursor(3, 33);
+            ssd1306_WriteString("RSSI", Font_6x8, 1);
+            ssd1306_SetCursor(80, 33);
             ssd1306_WriteString(buffer_string, Font_6x8, 1);
+            ssd1306_DrawRectangle(1, 41, 127, 41, 1);	// Separador horizontal
+
+            ssd1306_SetCursor(3, 43);
+            ssd1306_WriteString("MQTT", Font_6x8, 1);
+            ssd1306_DrawRectangle(1, 51, 127, 41, 1);	// Separador horizontal
 
             if(connected_mqtt){
-                ssd1306_SetCursor(3, 45);
-                ssd1306_WriteString("MQTT: CONNECTED", Font_6x8, 1);
+                ssd1306_SetCursor(70, 43);
+                ssd1306_WriteString("CONNECTED", Font_6x8, 1);
             } else {
-                ssd1306_SetCursor(3, 45);
-                ssd1306_WriteString("MQTT: DISCONNECTED", Font_6x8, 1);
+                ssd1306_SetCursor(52, 43);
+                ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
             }
 
+            ssd1306_SetCursor(3, 53);
+            ssd1306_WriteString("WEB", Font_6x8, 1);
+
             if(start_wifi){
-                ssd1306_SetCursor(3, 55);
-                ssd1306_WriteString("WIFI: CONNECTED", Font_6x8, 1);
+
+                ssd1306_SetCursor(70, 54);
+                ssd1306_WriteString("CONNECTED", Font_6x8, 1);
             } else {
-                ssd1306_SetCursor(3, 55);
-                ssd1306_WriteString("WIFI: DISCONNECTED", Font_6x8, 1);
+                ssd1306_SetCursor(52, 54);
+                ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
             }
         }
     }
