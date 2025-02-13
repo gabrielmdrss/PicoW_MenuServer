@@ -20,6 +20,8 @@
 #include "lwip/dns.h"             // Biblioteca de Funções DNS
 #include <time.h>                 // Biblioteca para manipulação de tempo
 
+float lat, lon;
+
 // Função para gerar valores aleatórios dentro das faixas especificadas
 void generate_random_coordinates(float *lat, float *lon) {
     float lat_min = -5.813619388080041;
@@ -114,7 +116,6 @@ void star_http_request(const void *data, u16_t len) {
 // Função para criar a solicitação HTTP POST com dados JSON
 void build_http_request(float temperatura) {
     char http_request[256]; // Buffer para a requisição HTTP
-    float lat, lon;
 
     generate_random_coordinates(&lat, &lon);
     snprintf(http_request, sizeof(http_request),
@@ -122,6 +123,33 @@ void build_http_request(float temperatura) {
              "Host: api.thingspeak.com\r\n"
              "Connection: close\r\n\r\n", temperatura, lat, lon);
     star_http_request(http_request, strlen(http_request));
+}
+
+// --------------------------- Função de Desligamento do Servidor TCP ---------------------------
+
+/**
+ * @brief Desliga o servidor TCP e libera recursos.
+ *
+ * @param server_state Um ponteiro para a estrutura `TCP_SERVER_T` representando o estado do servidor.
+ *
+ * Esta função desliga graciosamente o servidor TCP fechando todas as conexões ativas,
+ * liberando a porta ocupada e liberando qualquer memória dinamicamente alocada associada
+ * ao estado do servidor.
+ *
+ * ### Comportamento:
+ * - Fecha todas as conexões ativas invocando `tcp_server_close`.
+ * - Libera a memória alocada para a estrutura `TCP_SERVER_T`.
+ * - Imprime uma mensagem de depuração indicando que o servidor foi desligado e a porta foi liberada.
+ *
+ * @note Certifique-se de que nenhuma operação em andamento dependa do estado do servidor antes de invocar esta função.
+ * @note O estado do servidor deve ser devidamente inicializado antes de chamar esta função.
+ */
+void shutdown_tcp_server(TCP_SERVER_T *server_state) {
+    if (server_state) {
+        tcp_server_close(server_state);
+        free(server_state);
+    }
+    DEBUG_printf("Servidor TCP fechado e porta 80 liberada.\n");
 }
 
 #endif /*HTTP_H*/

@@ -52,6 +52,8 @@
         "ctype.h": "c",
         "icons.h": "c",
         "mqtt.h": "c",
-        "adc.h": "c"
+        "adc.h": "c",
+        "tcpip.h": "c",
+        "ap_mode_utility.h": "c"
     }
 }

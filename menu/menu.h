@@ -30,7 +30,8 @@
 #include "icons.h"                              // Arquivo contendo ícones para o display SSD1306.
 #include "hardware/timer.h"                     // Biblioteca para operações com temporizadores.     
 #include "http.h"
-
+#include "defines_functions.h"                  // Arquivo contendo definições e funções para o projeto.
+#include "lwip/tcpip.h"                         // Certifique-se de incluir a biblioteca LWIP
 
 // ---------------------------- Definições de Botões ----------------------------
 
@@ -58,6 +59,8 @@ uint8_t x_distance;
 #define TEMPERATURE_UNITS 'C'     // Unidade para medição de temperatura.
 int start_wifi = 0;
 int connected_mqtt = 0;
+float temperature;
+int percentual = 0;
 
 
 // --------------------------- Função de Leitura da Temperatura Interna ---------------------------
@@ -235,7 +238,7 @@ bool timer_callback(repeating_timer_t *rt) {
 
 void start_timer() {
     static repeating_timer_t timer;
-    add_repeating_timer_ms(1000, timer_callback, NULL, &timer); // Timer de 1 segundo
+    add_repeating_timer_ms(2000, timer_callback, NULL, &timer); // Timer de 1 segundo
 }
 // -------------------------- Função de Filtro Passa-Baixa --------------------------
 
@@ -443,6 +446,20 @@ void scape_function(void){
 }
 
 
+void not_initialized(void){
+
+    ssd1306_SetCursor(4, 23);
+    ssd1306_WriteString("Inicialize BitDogLab!", Font_6x8, White);
+
+    ssd1306_SetCursor(37, 40);
+    ssd1306_WriteString("Pressione:", Font_6x8, White);
+
+    ssd1306_SetCursor(22, 50);
+    ssd1306_WriteString("<System Setup>", Font_6x8, White);
+    scape_function();
+
+}
+
 // ---------------------------- Função de Renderização da Tela Inicial ----------------------------
 
 /**
@@ -610,48 +627,195 @@ void menu(void) {
 
         // OPÇÃO Servidor Web
         if (item_selected == 0){
-            // Função externa para utilizar e amostrar a funcionalidade do sensor ultrassônico
 
             // Exibe o cabeçalho
-            ssd1306_SetCursor(45, 1);
-            ssd1306_WriteString("CLOUD:", Font_7x10, White);
-            ssd1306_FillRectangle(1, 15, 128, 16, White);
-            ssd1306_DrawRectangle(1, 20, 127, 63, White);
+            char buffer_string[7];                // Buffer para armazenar valores formatados em string
+            cabecalho("CLOUD:", 45, 1);
 
-            if(!start_wifi){
-
-            //start_http_server();
-            start_timer();
-            start_wifi = 1;
-
-            } else {
-
+            if(inicialized){
 
                 if(timer_expired){
-                    float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
+                    temperature = read_onboard_temperature(TEMPERATURE_UNITS);
 
                     build_http_request(temperature);
                     timer_expired = false;
                 }
 
-            }
+                ssd1306_SetCursor(3, 24);
+                sprintf(buffer_string, "- Temp: %.2f %c", temperature, TEMPERATURE_UNITS);
+                ssd1306_WriteString(buffer_string, Font_6x8, White);
+                sprintf(buffer_string, "- Latitude: %.4f", lat);
+                ssd1306_DrawRectangle(1, 34, 127, 34, White);
+                ssd1306_SetCursor(3, 38);
+                ssd1306_WriteString(buffer_string, Font_6x8, White);
+                ssd1306_DrawRectangle(1, 48, 127, 48, White);
+                sprintf(buffer_string, "- Longitude: %.4f", lon);
+                ssd1306_SetCursor(3, 52);
+                ssd1306_WriteString(buffer_string, Font_6x8, White);
 
-            cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
+                cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
+
+            } else {
+
+                not_initialized();
+
+            }
         } 
 
         // OPÇÃO Conexão MQTT
         else if (item_selected == 1){
-            // Função externa para usar e amostrar a funcionalidade do giroscópio
-            ssd1306_SetCursor(20, 1);
-            ssd1306_WriteString("SYSTEM SETUP: ", Font_7x10, 1);
-            ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
-            ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
+
+            cabecalho("SYSTEM SETUP:", 20, 1);
+
+            if(inicialized == 0){
+
+                char buffer_float[7];	// Buffer para armazenar valores formatados em string
+            
+                while(percentual < 100){
+
+                    cabecalho("SYSTEM SETUP:", 20, 1);
+                    
+                    ssd1306_SetCursor(11, 28);
+                    snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
+                    ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                    ssd1306_WriteString("%", Font_7x10, 1);
+
+
+                    if(percentual == 20){
+                        ssd1306_Fill(Black);
+                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_SetCursor(33, 28);
+                        ssd1306_WriteString("- Temp INIT", Font_6x8, White);
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_SetCursor(11, 28);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        ssd1306_WriteString("%", Font_7x10, 1);
+                        adc_set_temp_sensor_enabled(true);  // Habilita o sensor de temperatura interno
+                        adc_select_input(4);                // Seleciona o sensor de temperatura interno como entrada ADC
+                        adc_gpio_init(26);                  // Inicializa o pino GPIO 26 para ADC
+                        adc_gpio_init(27);                  // Inicializa o pino GPIO 27 para ADC
+
+
+                    } else if (percentual == 50) {
+                        ssd1306_Fill(Black);
+                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_SetCursor(33, 28);
+                        ssd1306_WriteString("- Random INIT", Font_6x8, White);
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_SetCursor(11, 28);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        ssd1306_WriteString("%", Font_7x10, 1);
+                        srand(time(NULL));                  // Inicializa o gerador de números aleatórios
+
+                    } else if (percentual == 75) {
+                        ssd1306_Fill(Black);
+                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_SetCursor(33, 28);
+                        ssd1306_WriteString("- Buzzer INIT", Font_6x8, White);
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_SetCursor(11, 28);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        ssd1306_WriteString("%", Font_7x10, 1);
+                        pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
+
+                    } else if (percentual == 90) {
+                        ssd1306_Fill(Black);
+                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_SetCursor(33, 28);
+                        ssd1306_WriteString("- WiFi INIT...", Font_6x8, White);
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_SetCursor(11, 28);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        ssd1306_WriteString("%", Font_7x10, 1);
+                        ssd1306_UpdateScreen();
+
+                        if (cyw43_arch_init()) {
+                            printf("Wi-Fi init failed\n");
+                            return;
+                        }
+
+                        printf("Habilitando modo STA...\n");
+                        cyw43_arch_enable_sta_mode();   // Habilita o modo STA
+
+                        // Tenta conectar ao Wi-Fi
+                        printf("Conectando ao Wi-Fi...\n");
+
+                        if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 10000)) {
+                            printf("Erro: Falha ao conectar ao Wi-Fi.\n");
+                            break;
+                        }
+                        printf("Conectado a %s\n", ssid);
+                        
+                        start_wifi = 1;
+                        start_timer();
+                    }
+                    
+                    ssd1306_DrawRectangle(11, 40, 117, 55, 1);
+			        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                    sleep_ms(100);
+                    percentual++;
+                    ssd1306_UpdateScreen();
+                }
+                
+                if(percentual != 100){
+                    ssd1306_SetCursor(57, 28);
+                    ssd1306_WriteString("INITIALIZATION FAILED", Font_6x8, White);
+                    scape_function();
+
+                } else {
+                    inicialized = 1;
+                }
+
+
+                // pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
+
+                // // Reinitialize o Wi-Fi no modo STA (Station)
+
+                // if (cyw43_arch_init()) {
+                //     printf("Wi-Fi init failed\n");
+                //     return;
+                // }
+
+                // printf("Habilitando modo STA...\n");
+                // cyw43_arch_enable_sta_mode();   // Habilita o modo STA
+
+                // // Tenta conectar ao Wi-Fi
+                // printf("Conectando ao Wi-Fi...\n");
+                
+
+                // if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 10000)) {
+                //     printf("Erro: Falha ao conectar ao Wi-Fi.\n");
+                //     ssd1306_SetCursor(21, 54);
+                //     ssd1306_WriteString("NOT CONNECTED", Font_6x8, White);
+                //     ssd1306_UpdateScreen();
+                //     return;
+                // }
+                // ssd1306_SetCursor(35, 54);
+                // ssd1306_WriteString("CONNECTED", Font_6x8, White);
+                // printf("Conectado a %s\n", ssid);
+                // scape_function();
+
+                // inicialized = 1;
+
+            } else {
+
+                ssd1306_SetCursor(7, 33);
+                ssd1306_WriteString("ALREADY INITIALIZED", Font_6x8, White);
+
+            }
 
         }
         
         // OPÇÃO BUZZER
         else if (item_selected == 2){
-            // Função externa para usar e amostrar a funcionalidade do filtro de Kalman
 
             char buffer_string[7];	// Buffer para armazenar valores formatados em string
             ssd1306_SetCursor(25, 1);
@@ -659,84 +823,82 @@ void menu(void) {
             ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
             ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
 
-            // Lê o valor ADC e filtra
-            adc_select_input(1);
-            uint adc_x_raw = adc_read();
-            uint filtered_read = low_pass_filter(adc_x_raw);
+            if(inicialized){
+                // Função externa para usar e amostrar a funcionalidade do filtro de Kalman
 
-            // Ajuste da frequência
-            if (adc_x_raw > ADC_UPPER_THRESHOLD && frequency < MAX_FREQUENCY) {
-                frequency += STEP;
-            } else if (adc_x_raw < ADC_LOWER_THRESHOLD && frequency > MIN_FREQUENCY) {
-                frequency -= STEP;
+                // Lê o valor ADC e filtra
+                adc_select_input(1);
+                uint adc_x_raw = adc_read();
+                uint filtered_read = low_pass_filter(adc_x_raw);
+
+                // Ajuste da frequência
+                if (adc_x_raw > ADC_UPPER_THRESHOLD && frequency < MAX_FREQUENCY) {
+                    frequency += STEP;
+                } else if (adc_x_raw < ADC_LOWER_THRESHOLD && frequency > MIN_FREQUENCY) {
+                    frequency -= STEP;
+                }
+
+                // Configura o buzzer com a nova frequência
+                set_buzzer_frequency(BUZZER_PIN, frequency);
+
+                // Atualiza a barra no display
+                uint8_t x_distance = (uint8_t)(((frequency - MIN_FREQUENCY) * 128) / (MAX_FREQUENCY - MIN_FREQUENCY)) + 1;
+                ssd1306_DrawRectangle(1, 48, 128, 63, 1);
+                ssd1306_FillRectangle(1, 48, x_distance, 63, 1); // Barra horizontal
+
+                // Mostra a frequência atual
+                ssd1306_SetCursor(25, 30);
+                sprintf(buffer_string, "FREQ: %u Hz", (uint)frequency);
+                ssd1306_WriteString(buffer_string, Font_7x10, 1);
+            
+            } else {
+                not_initialized();
             }
-
-            // Configura o buzzer com a nova frequência
-            set_buzzer_frequency(BUZZER_PIN, frequency);
-
-            // Atualiza a barra no display
-            uint8_t x_distance = (uint8_t)(((frequency - MIN_FREQUENCY) * 128) / (MAX_FREQUENCY - MIN_FREQUENCY)) + 1;
-            ssd1306_DrawRectangle(1, 48, 128, 63, 1);
-            ssd1306_FillRectangle(1, 48, x_distance, 63, 1); // Barra horizontal
-
-            // Mostra a frequência atual
-            ssd1306_SetCursor(25, 30);
-            sprintf(buffer_string, "FREQ: %u Hz", (uint)frequency);
-            ssd1306_WriteString(buffer_string, Font_7x10, 1);
-
         }
         
         // OPÇÃO Informações da Rede
         else if (item_selected == 3){
-            // Função externa para usar e amostrar a funcionalidade de calibração do sensor inercial
-            ssd1306_SetCursor(22, 1);
-            ssd1306_WriteString("NETWORK INFO: ", Font_7x10, 1);
-            ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
-            ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
-            ssd1306_DrawRectangle(28, 20, 28, 63, 1);	// Separador Vertical
 
-            char buffer_string[7];                      // Buffer para armazenar valores formatados em string
-            uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
-            sprintf(buffer_string, "%d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-            ssd1306_SetCursor(3, 23);
-            ssd1306_WriteString("IP", Font_6x8, 1);
-            ssd1306_SetCursor(53, 23);
-            ssd1306_WriteString(buffer_string, Font_6x8, 1);
-            ssd1306_DrawRectangle(1, 31, 127, 31, 1);	// Separador horizontal
+            cabecalho("NETWORK INFO:", 22, 1);
+
+            if(inicialized){
+
+                ssd1306_DrawRectangle(32, 20, 32, 63, 1);	// Separador Vertical
+
+                char buffer_string[7];                      // Buffer para armazenar valores formatados em string
+                uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
+                sprintf(buffer_string, "%d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
+                ssd1306_SetCursor(3, 23);
+                ssd1306_WriteString("IP", Font_6x8, 1);
+                ssd1306_SetCursor(53, 23);
+                ssd1306_WriteString(buffer_string, Font_6x8, 1);
+                ssd1306_DrawRectangle(1, 34, 127, 34, 1);	// Separador horizontal
+                
+                int32_t rssi;
+                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+                sprintf(buffer_string, "%d dBm", rssi);
+                ssd1306_SetCursor(3, 37);
+                ssd1306_WriteString("RSSI", Font_6x8, 1);
+                ssd1306_SetCursor(81, 37);
+                ssd1306_WriteString(buffer_string, Font_6x8, 1);
+                ssd1306_DrawRectangle(1, 46, 127, 46, 1);	// Separador horizontal
+
+                ssd1306_SetCursor(3, 50);
+                ssd1306_WriteString("WIFI", Font_6x8, 1);
+
+                if(start_wifi){
+
+                    ssd1306_SetCursor(70, 50);
+                    ssd1306_WriteString("CONNECTED", Font_6x8, 1);
+                } else {
+                    ssd1306_SetCursor(52, 50);
+                    ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
+                }
             
-            int32_t rssi;
-            cyw43_wifi_get_rssi(&cyw43_state, &rssi);
-            sprintf(buffer_string, "%d dBm", rssi);
-            ssd1306_SetCursor(3, 33);
-            ssd1306_WriteString("RSSI", Font_6x8, 1);
-            ssd1306_SetCursor(80, 33);
-            ssd1306_WriteString(buffer_string, Font_6x8, 1);
-            ssd1306_DrawRectangle(1, 41, 127, 41, 1);	// Separador horizontal
-
-            ssd1306_SetCursor(3, 43);
-            ssd1306_WriteString("MQTT", Font_6x8, 1);
-            ssd1306_DrawRectangle(1, 51, 127, 41, 1);	// Separador horizontal
-
-            if(connected_mqtt){
-                ssd1306_SetCursor(70, 43);
-                ssd1306_WriteString("CONNECTED", Font_6x8, 1);
             } else {
-                ssd1306_SetCursor(52, 43);
-                ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
+                not_initialized();
             }
-
-            ssd1306_SetCursor(3, 53);
-            ssd1306_WriteString("WEB", Font_6x8, 1);
-
-            if(start_wifi){
-
-                ssd1306_SetCursor(70, 54);
-                ssd1306_WriteString("CONNECTED", Font_6x8, 1);
-            } else {
-                ssd1306_SetCursor(52, 54);
-                ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
-            }
-        }
+    }
     }
 
     if (!(gpio_get(BUTTON_B)) && button_enter_clicked == 0) {
