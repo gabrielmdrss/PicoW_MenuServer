@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include "ap_mode/ap_mode_utility.h"
 #include "menu/menu.h"
+#include <time.h>
 
 int main() {
 
     stdio_init_all();                   // Inicializa todas as funções de entrada e saída padrão
+
+    srand(time(NULL));
 
 /*------------------------------ Inicializando os pinos ---------------------------------*/
 

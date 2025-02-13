@@ -18,6 +18,18 @@
 #include "lwip/tcp.h"             // Biblioteca de Funções TCP
 #include "lwip/apps/httpd.h"      // Biblioteca de funções para o protocolo HTTP
 #include "lwip/dns.h"             // Biblioteca de Funções DNS
+#include <time.h>                 // Biblioteca para manipulação de tempo
+
+// Função para gerar valores aleatórios dentro das faixas especificadas
+void generate_random_coordinates(float *lat, float *lon) {
+    float lat_min = -5.813619388080041;
+    float lat_max = -5.81018697695044;
+    float lon_min = -35.20495186786747;
+    float lon_max = -35.201481075005;
+
+    *lat = lat_min + ((float)rand() / RAND_MAX) * (lat_max - lat_min);
+    *lon = lon_min + ((float)rand() / RAND_MAX) * (lon_max - lon_min);
+}
 
 // Função de callback para processar respostas HTTP
 static err_t http_client_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
@@ -102,11 +114,13 @@ void star_http_request(const void *data, u16_t len) {
 // Função para criar a solicitação HTTP POST com dados JSON
 void build_http_request(float temperatura) {
     char http_request[256]; // Buffer para a requisição HTTP
-    
+    float lat, lon;
+
+    generate_random_coordinates(&lat, &lon);
     snprintf(http_request, sizeof(http_request),
-             "GET /update?api_key=JWR3PN07O0NANG46&field1=%.2f HTTP/1.1\r\n"
+             "GET /update?api_key=JWR3PN07O0NANG46&field1=%.2f&field2=%.6f&field3=%.6f HTTP/1.1\r\n"
              "Host: api.thingspeak.com\r\n"
-             "Connection: close\r\n\r\n", temperatura);
+             "Connection: close\r\n\r\n", temperatura, lat, lon);
     star_http_request(http_request, strlen(http_request));
 }
 

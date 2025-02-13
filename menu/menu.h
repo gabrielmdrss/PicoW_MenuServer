@@ -59,6 +59,7 @@ uint8_t x_distance;
 int start_wifi = 0;
 int connected_mqtt = 0;
 
+
 // --------------------------- Função de Leitura da Temperatura Interna ---------------------------
 
 /**
@@ -612,8 +613,8 @@ void menu(void) {
             // Função externa para utilizar e amostrar a funcionalidade do sensor ultrassônico
 
             // Exibe o cabeçalho
-            ssd1306_SetCursor(32, 1);
-            ssd1306_WriteString("WEB SERVER", Font_7x10, White);
+            ssd1306_SetCursor(45, 1);
+            ssd1306_WriteString("CLOUD:", Font_7x10, White);
             ssd1306_FillRectangle(1, 15, 128, 16, White);
             ssd1306_DrawRectangle(1, 20, 127, 63, White);
 
@@ -625,20 +626,6 @@ void menu(void) {
 
             } else {
 
-                // char buffer_string[7];  // Buffer para armazenar valores formatados em string
-                // uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
-                // sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-                // ssd1306_SetCursor(18, 25);
-                // ssd1306_WriteString(buffer_string, Font_6x8, White);
-
-                // ssd1306_SetCursor(23, 45);
-                // ssd1306_WriteString("HTTP REQUEST: ", Font_6x8, White);
-                // ssd1306_SetCursor(45, 55);
-                // if (current_request == "none")
-                //     ssd1306_SetCursor(45, 55);
-                // else
-                //     ssd1306_SetCursor(36, 55);
-                // ssd1306_WriteString(current_request, Font_6x8, White);
 
                 if(timer_expired){
                     float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
@@ -655,71 +642,11 @@ void menu(void) {
         // OPÇÃO Conexão MQTT
         else if (item_selected == 1){
             // Função externa para usar e amostrar a funcionalidade do giroscópio
-            ssd1306_SetCursor(10, 1);
-            ssd1306_WriteString("MQTT Connection: ", Font_7x10, 1);
+            ssd1306_SetCursor(20, 1);
+            ssd1306_WriteString("SYSTEM SETUP: ", Font_7x10, 1);
             ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
             ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
 
-            // if(0  /*!start_wifi*/){
-
-            //     ssd1306_SetCursor(15, 38);
-            //     ssd1306_WriteString("CONNECT TO WIFI!!", Font_6x8, 1);
-            //     scape_function();
-
-            // } else {
-
-            //     if(!connected_mqtt){
-                
-            //     if (!ip4addr_aton(MQTT_SERVER, &addr)) {
-            //         ssd1306_SetCursor(20, 25);
-            //         ssd1306_WriteString("IP ERROR!!", Font_6x8, 1);
-            //         scape_function();
-            //     }
-
-            //     cliente_mqtt = mqtt_client_new();
-            //     mqtt_set_inpub_callback(cliente_mqtt, &mqtt_incoming_publish_cb, &mqtt_incoming_data_cb, NULL);
-            //     err_t erro = mqtt_client_connect(cliente_mqtt, &addr, 1883, &mqtt_connection_cb, NULL, &mqtt_client_info);
-
-            //     if (erro != ERR_OK) {
-            //         ssd1306_SetCursor(12, 25);
-            //         ssd1306_WriteString("CONNECTION ERROR!!", Font_6x8, 1);
-            //         scape_function();
-            //     }
-
-            //     ssd1306_SetCursor(9, 25);
-            //     ssd1306_WriteString("CONNECTED TO BROKER!!", Font_6x8, 1);
-            //     ssd1306_SetCursor(30, 35);
-            //     ssd1306_WriteString(MQTT_SERVER, Font_6x8, 1);
-            //     ssd1306_UpdateScreen();
-            //     sleep_ms(2000);
-            //     connected_mqtt = 1;
-
-            //     }
-                
-            //     cont_envio++;
-            //     sleep_ms(1);
-
-            //     ssd1306_SetCursor(3, 22);
-            //     ssd1306_WriteString("PUB 'TEMP/TPC'= ", Font_6x8, White);
-            //     ssd1306_DrawRectangle(25, 20, 25, 37, 1);	// Desenha o retângulo principal do display
-            //     ssd1306_WriteString(last_temp, Font_6x8, White);
-            //     ssd1306_DrawRectangle(1, 37, 127, 63, 1);	// Desenha o retângulo principal do display
-            //     ssd1306_SetCursor(3, 40);
-            //     ssd1306_WriteString("SUB 'LED/TPC'= ", Font_6x8, White);
-            //     ssd1306_DrawRectangle(25, 37, 25, 63, 1);	// Desenha o retângulo principal do display
-            //     ssd1306_SetCursor(30, 50);
-            //     ssd1306_WriteString(last_led, Font_6x8, White);
-            //     if(cont_envio >= 34){
-            //         cont_envio = 0;
-            //         float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
-
-            //         //float para string
-            //         ftoa(temperature, tempString, 2);
-
-            //         mqtt_publish(cliente_mqtt, PUBLISH_STR_NAME, tempString, 5, 0, false, &mqtt_request_cb, NULL);
-            //         last_temp = tempString;
-            //     }
-            // }
         }
         
         // OPÇÃO BUZZER

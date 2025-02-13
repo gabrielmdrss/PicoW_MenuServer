@@ -40,47 +40,47 @@ int down_clicked = 0; // mesmo que acima
 // ---------------------- Variáveis de Ícones Bitmap -----------------------
 
 /**
- * @brief Dados do bitmap para o ícone do painel.
+ * @brief Dados do bitmap para o ícone da Nuvem.
  *
- * Este array contém os dados de pixels para o ícone do painel, representados em formato hexadecimal.
- * Os dados serão usados para exibir o ícone na tela na aplicação.
+ * Este array contém os dados de pixels para o ícone da opção de envio para nuvem, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela da aplicação com o display SSD1306.
  */
-const unsigned char bitmap_icon_dashboard [] = {
-  0x07, 0xe0, 0x18, 0x18, 0x21, 0x24, 0x50, 0x02, 0x48, 0x0a, 0x84, 0x01, 0x83, 0x81, 0xa2, 0x45,
-  0x82, 0x41, 0x81, 0x81, 0xa0, 0x05, 0x40, 0x02, 0x4b, 0xd2, 0x23, 0xc4, 0x18, 0x18, 0x07, 0xe0
+const unsigned char bitmap_icon_cloud [] = {
+	0x00, 0x00, 0x01, 0xc0, 0x0e, 0x20, 0x10, 0x10, 0x10, 0x10, 0x60, 0x58, 0x88, 0x04, 0x90, 0x22,
+  0x40, 0x02, 0x3f, 0xfc, 0x00, 0x90, 0x28, 0x14, 0x08, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 /**
- * @brief Dados do bitmap para o ícone do sensor de estacionamento.
+ * @brief Dados do bitmap para o ícone da Engrenagem.
  *
- * Este array contém os dados de pixels para o ícone do sensor de estacionamento, representados em formato hexadecimal.
- * Os dados serão usados para exibir o ícone na tela na aplicação.
+ * Este array contém os dados de pixels para o ícone da opção de Setup de Inicialização, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela da aplicação com o display SSD1306.
  */
-const unsigned char bitmap_icon_parksensor [] = {
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x00, 0x44, 0x00, 0xA4, 0x00,
-  0x9F, 0x00, 0x00, 0x81, 0x30, 0xA1, 0x48, 0xA9, 0x4B, 0xA9, 0x30, 0xA0,
-  0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
-
-/**
- * @brief Dados do bitmap para o ícone de fogos de artifício.
- *
- * Este array contém os dados de pixels para o ícone de fogos de artifício, representados em formato hexadecimal.
- * Os dados serão usados para exibir o ícone na tela na aplicação.
- */
-const unsigned char bitmap_icon_fireworks [] = {
-  0x00, 0x00, 0x00, 0x08, 0x00, 0x94, 0x10, 0x08, 0x10, 0x00, 0x6c, 0x00, 0x10, 0x10, 0x10, 0x10,
-  0x00, 0x00, 0x00, 0xc6, 0x00, 0x00, 0x00, 0x10, 0x04, 0x10, 0x0a, 0x00, 0x04, 0x00, 0x00, 0x00
+const unsigned char bitmap_icon_setup [] = {
+	0x31, 0x8c, 0x5a, 0x5a, 0x6e, 0x76, 0x30, 0x0c, 0x13, 0xc8, 0x17, 0xe8, 0x76, 0x6e, 0x84, 0x21, 
+	0x74, 0x2e, 0x16, 0x68, 0x17, 0xe8, 0x30, 0x0c, 0x6e, 0x76, 0x5a, 0x5a, 0x32, 0x4c, 0x01, 0x80
 };
 
 /**
- * @brief Dados do bitmap para o ícone da bateria.
+ * @brief Dados do bitmap para o ícone da Rede.
  *
- * Este array contém os dados de pixels para o ícone da bateria, representados em formato hexadecimal.
- * Os dados serão usados para exibir o ícone na tela na aplicação.
+ * Este array contém os dados de pixels para o ícone da opção de Informações de Rede, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela da aplicação com o display SSD1306.
  */
-const unsigned char bitmap_icon_battery [] = {
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xf8, 0x40, 0x04, 0x5b, 0x66, 0x5b, 0x66,
-  0x5b, 0x66, 0x40, 0x04, 0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+const unsigned char bitmap_icon_Network [] = {
+  0x00, 0x00, 0x3f, 0xe0, 0x40, 0x10, 0x9f, 0xc8, 0x20, 0x20, 0x0f, 0x80, 0x10, 0x4a, 0x07, 0x11,
+  0x08, 0x95, 0x02, 0x00, 0x00, 0x04, 0x00, 0x15, 0x00, 0x11, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00
+};
+
+/**
+ * @brief Dados do bitmap para o ícone do auto falante.
+ *
+ * Este array contém os dados de pixels para o ícone da opção de controlar frequência do buzzer, representados em formato hexadecimal.
+ * Os dados serão usados para exibir o ícone na tela da aplicação com o display SSD1306.
+ */
+const unsigned char bitmap_icon_speaker [] = {
+	0x00, 0x00, 0x00, 0x10, 0x03, 0x08, 0x07, 0x24, 0x0d, 0x12, 0x7b, 0x4a, 0x47, 0x2a, 0x7f, 0x2a, 
+	0x7f, 0x2a, 0x7f, 0x2a, 0x7f, 0x4a, 0x0f, 0x12, 0x07, 0x24, 0x03, 0x08, 0x00, 0x10, 0x00, 0x00
 };
 
 /**
@@ -103,10 +103,10 @@ const unsigned char bitmap_scrollbar_background [] = {
  * exibições de tela dentro da aplicação.
  */
 const unsigned char* bitmap_icons[4] = {
-  bitmap_icon_dashboard,    // Ponteiro para o ícone do painel.
-  bitmap_icon_parksensor,   // Ponteiro para o ícone do sensor de estacionamento.
-  bitmap_icon_fireworks,    // Ponteiro para o ícone de fogos de artifício.
-  bitmap_icon_battery       // Ponteiro para o ícone da bateria.
+  bitmap_icon_cloud,    // Ponteiro para o ícone do painel.
+  bitmap_icon_setup,   // Ponteiro para o ícone do sensor de estacionamento.
+  bitmap_icon_speaker,    // Ponteiro para o ícone de fogos de artifício.
+  bitmap_icon_Network       // Ponteiro para o ícone da bateria.
 };
 
 /**
@@ -146,8 +146,8 @@ const unsigned char bitmap_item_sel_outline [] = {
  * exibições de tela dentro da aplicação.
  */
 char menu_items [NUM_ITEMS] [MAX_ITEM_LENGTH] = {  // array com nomes dos itens
-  {"Web Server"},
-  {"MQTT"},
+  {"Cloud"},
+  {"System Setup"},
   {"Buzzer"},
   {"Network Info"}
  };
