@@ -26,10 +26,10 @@
 #include "hardware/clocks.h"					// Biblioteca para configuração de clocks.
 #include "ssd1306/ssd1306_fonts.h"				// Arquivo contendo fontes para o display SSD1306.
 #include "ssd1306/ssd1306.h"					// Arquivo contendo funções para o display SSD1306.
-#include "connectivity/wifi.h"					// Arquivo contendo funções úteis para comunicação Wi-Fi.
-#include "connectivity/mqtt_utility.h"			// Arquivo contendo funções úteis para comunicação MQTT
 #include "lwip/apps/mqtt.h"						// Biblioteca MQTT para lidar com o protocolo MQTT.
-#include "icons.h"
+#include "icons.h"                              // Arquivo contendo ícones para o display SSD1306.
+#include "hardware/timer.h"                     // Biblioteca para operações com temporizadores.     
+#include "http.h"
 
 
 // ---------------------------- Definições de Botões ----------------------------
@@ -53,20 +53,189 @@ float frequency = MIN_FREQUENCY;
 int Limit_Buzzer = 0;
 uint8_t x_distance;
 
+//--------------------------------Variáveis provisórias--------------------------------------------
 
-//------------------------------- Variáveis MQTT ---------------------------------
+#define TEMPERATURE_UNITS 'C'     // Unidade para medição de temperatura.
+int start_wifi = 0;
+int connected_mqtt = 0;
 
-ip_addr_t addr;
-mqtt_client_t *cliente_mqtt;
-int connected_mqtt;
-char *last_temp;
+// --------------------------- Função de Leitura da Temperatura Interna ---------------------------
+
+/**
+ * @brief Lê o sensor de temperatura interno.
+ *
+ * @param unit A unidade de temperatura ('C' para Celsius, 'F' para Fahrenheit).
+ * @return float A temperatura na unidade especificada.
+ *
+ * Esta função lê o sensor de temperatura interno e retorna a temperatura
+ * na unidade especificada.
+ *
+ * ### Comportamento:
+ * - Habilita o sensor de temperatura interno.
+ * - Seleciona a entrada ADC para o sensor de temperatura.
+ * - Lê o valor do ADC e converte para temperatura.
+ * - Retorna a temperatura na unidade especificada.
+ *
+ * @note A função assume um ADC de 12 bits com uma tensão de referência de 3.3V.
+ */
+float read_onboard_temperature(const char unit) {
+    
+    adc_set_temp_sensor_enabled(true);
+    adc_select_input(4); // Seleciona o sensor de temperatura interno
+
+    /* Conversão de 12 bits, assume valor máximo == ADC_VREF == 3.3 V */
+    const float conversionFactor = 3.3f / (1 << 12);
+
+    float adc = (float)adc_read() * conversionFactor;
+    float tempC = 27.0f - (adc - 0.706f) / 0.001721f;
+
+    if (unit == 'C') {
+        return tempC;
+    } else if (unit == 'F') {
+        return tempC * 9 / 5 + 32;
+    }
+
+    return -1.0f;
+}
+
+// --------------------------- Função de Inversão de String ---------------------------
+
+/**
+ * @brief Inverte uma string.
+ *
+ * @param str A string a ser invertida.
+ * @param len O comprimento da string.
+ *
+ * Esta função inverte a string fornecida.
+ *
+ * ### Comportamento:
+ * - Troca caracteres do início e do fim da string.
+ * - Continua trocando até que o meio da string seja alcançado.
+ *
+ * @note A string invertida é armazenada no parâmetro `str`.
+ */
+void reverse(char* str, int len) 
+{ 
+    int i = 0, j = len - 1, temp; 
+    while (i < j) { 
+        temp = str[i]; 
+        str[i] = str[j]; 
+        str[j] = temp; 
+        i++; 
+        j--; 
+    } 
+} 
+
+
+// --------------------------- Função de Conversão de Inteiro para String ---------------------------
+
+/**
+ * @brief Converte um inteiro para uma string.
+ *
+ * @param x O inteiro a ser convertido.
+ * @param str A string resultante.
+ * @param d Número de dígitos necessários na saída.
+ * @return int O comprimento da string resultante.
+ *
+ * Esta função converte um inteiro para uma string com o número especificado de dígitos.
+ * Se o número de dígitos for maior que o número de dígitos no inteiro, zeros
+ * são adicionados no início.
+ *
+ * ### Comportamento:
+ * - Converte o inteiro para uma string.
+ * - Adiciona zeros à esquerda se necessário.
+ * - Inverte a string para obter a ordem correta.
+ *
+ * @note A string resultante é armazenada no parâmetro `str`.
+ */
+int intToStr(int x, char str[], int d) 
+{ 
+    int i = 0; 
+    if (x == 0) {
+    str[i++] = '0'; // Adiciona o dígito 0
+    }
+    while (x) { 
+        str[i++] = (x % 10) + '0'; 
+        x = x / 10; 
+    } 
+ 
+    // Se o número de dígitos necessário for maior, então 
+    // adiciona zeros no início 
+    while (i < d) 
+        str[i++] = '0'; 
+ 
+    reverse(str, i); 
+    str[i] = '\0'; 
+    return i; 
+}
+
+
+// --------------------------- Função de Conversão de Float para String ---------------------------
+
+/**
+ * @brief Converte um número de ponto flutuante para uma string.
+ *
+ * @param n O número de ponto flutuante a ser convertido.
+ * @param res A string resultante.
+ * @param afterpoint Número de dígitos após o ponto decimal.
+ *
+ * Esta função converte um número de ponto flutuante para uma string com o número
+ * especificado de dígitos após o ponto decimal.
+ *
+ * ### Comportamento:
+ * - Extrai a parte inteira do número.
+ * - Extrai a parte fracionária do número.
+ * - Converte a parte inteira para uma string.
+ * - Adiciona um ponto decimal se necessário.
+ * - Converte a parte fracionária para uma string.
+ *
+ * @note A string resultante é armazenada no parâmetro `res`.
+ */
+void ftoa(float n, char* res, int afterpoint) 
+{ 
+    // Extrai a parte inteira 
+    int ipart = (int)n; 
+ 
+    // Extrai a parte fracionária 
+    float fpart = n - (float)ipart; 
+ 
+    // Converte a parte inteira para string 
+    int i = intToStr(ipart, res, 0); 
+ 
+    // Verifica se é necessário exibir a parte fracionária 
+    if (afterpoint != 0) { 
+        res[i] = '.'; // Adiciona o ponto decimal 
+ 
+        // Obtém o valor da parte fracionária até o número de 
+        // pontos após o ponto decimal especificado. O terceiro parâmetro 
+        // é necessário para lidar com casos como 233.007 
+        fpart = fpart * pow(10, afterpoint); 
+ 
+        intToStr((int)fpart, res + i + 1, afterpoint); 
+    } 
+}
+
 
 //------------------------------ Variáveis do Modo AP -------------------------------
 
 char *ap_name = "PICO_W_AP";
 char *ap_pw = "raspberry";
 
+//-----------------------------------------------------------------------------------
 
+volatile bool timer_expired = false;
+
+//-----------------------------------------------------------------------------------
+
+bool timer_callback(repeating_timer_t *rt) {
+    timer_expired = true;
+    return true; // Retorna true para continuar chamando o callback
+}
+
+void start_timer() {
+    static repeating_timer_t timer;
+    add_repeating_timer_ms(1000, timer_callback, NULL, &timer); // Timer de 1 segundo
+}
 // -------------------------- Função de Filtro Passa-Baixa --------------------------
 
 /**
@@ -450,25 +619,34 @@ void menu(void) {
 
             if(!start_wifi){
 
-            start_http_server();
+            //start_http_server();
+            start_timer();
             start_wifi = 1;
 
             } else {
 
-                char buffer_string[7];  // Buffer para armazenar valores formatados em string
-                uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
-                sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-                ssd1306_SetCursor(18, 25);
-                ssd1306_WriteString(buffer_string, Font_6x8, White);
+                // char buffer_string[7];  // Buffer para armazenar valores formatados em string
+                // uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
+                // sprintf(buffer_string, "IP %d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
+                // ssd1306_SetCursor(18, 25);
+                // ssd1306_WriteString(buffer_string, Font_6x8, White);
 
-                ssd1306_SetCursor(23, 45);
-                ssd1306_WriteString("HTTP REQUEST: ", Font_6x8, White);
-                ssd1306_SetCursor(45, 55);
-                if (current_request == "none")
-                    ssd1306_SetCursor(45, 55);
-                else
-                    ssd1306_SetCursor(36, 55);
-                ssd1306_WriteString(current_request, Font_6x8, White);
+                // ssd1306_SetCursor(23, 45);
+                // ssd1306_WriteString("HTTP REQUEST: ", Font_6x8, White);
+                // ssd1306_SetCursor(45, 55);
+                // if (current_request == "none")
+                //     ssd1306_SetCursor(45, 55);
+                // else
+                //     ssd1306_SetCursor(36, 55);
+                // ssd1306_WriteString(current_request, Font_6x8, White);
+
+                if(timer_expired){
+                    float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
+
+                    build_http_request(temperature);
+                    timer_expired = false;
+                }
+
             }
 
             cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
@@ -482,66 +660,66 @@ void menu(void) {
             ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
             ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
 
-            if(0  /*!start_wifi*/){
+            // if(0  /*!start_wifi*/){
 
-                ssd1306_SetCursor(15, 38);
-                ssd1306_WriteString("CONNECT TO WIFI!!", Font_6x8, 1);
-                scape_function();
+            //     ssd1306_SetCursor(15, 38);
+            //     ssd1306_WriteString("CONNECT TO WIFI!!", Font_6x8, 1);
+            //     scape_function();
 
-            } else {
+            // } else {
 
-                if(!connected_mqtt){
+            //     if(!connected_mqtt){
                 
-                if (!ip4addr_aton(MQTT_SERVER, &addr)) {
-                    ssd1306_SetCursor(20, 25);
-                    ssd1306_WriteString("IP ERROR!!", Font_6x8, 1);
-                    scape_function();
-                }
+            //     if (!ip4addr_aton(MQTT_SERVER, &addr)) {
+            //         ssd1306_SetCursor(20, 25);
+            //         ssd1306_WriteString("IP ERROR!!", Font_6x8, 1);
+            //         scape_function();
+            //     }
 
-                cliente_mqtt = mqtt_client_new();
-                mqtt_set_inpub_callback(cliente_mqtt, &mqtt_incoming_publish_cb, &mqtt_incoming_data_cb, NULL);
-                err_t erro = mqtt_client_connect(cliente_mqtt, &addr, 1883, &mqtt_connection_cb, NULL, &mqtt_client_info);
+            //     cliente_mqtt = mqtt_client_new();
+            //     mqtt_set_inpub_callback(cliente_mqtt, &mqtt_incoming_publish_cb, &mqtt_incoming_data_cb, NULL);
+            //     err_t erro = mqtt_client_connect(cliente_mqtt, &addr, 1883, &mqtt_connection_cb, NULL, &mqtt_client_info);
 
-                if (erro != ERR_OK) {
-                    ssd1306_SetCursor(12, 25);
-                    ssd1306_WriteString("CONNECTION ERROR!!", Font_6x8, 1);
-                    scape_function();
-                }
+            //     if (erro != ERR_OK) {
+            //         ssd1306_SetCursor(12, 25);
+            //         ssd1306_WriteString("CONNECTION ERROR!!", Font_6x8, 1);
+            //         scape_function();
+            //     }
 
-                ssd1306_SetCursor(9, 25);
-                ssd1306_WriteString("CONNECTED TO BROKER!!", Font_6x8, 1);
-                ssd1306_SetCursor(30, 35);
-                ssd1306_WriteString(MQTT_SERVER, Font_6x8, 1);
-                ssd1306_UpdateScreen();
-                sleep_ms(2000);
-                connected_mqtt = 1;
+            //     ssd1306_SetCursor(9, 25);
+            //     ssd1306_WriteString("CONNECTED TO BROKER!!", Font_6x8, 1);
+            //     ssd1306_SetCursor(30, 35);
+            //     ssd1306_WriteString(MQTT_SERVER, Font_6x8, 1);
+            //     ssd1306_UpdateScreen();
+            //     sleep_ms(2000);
+            //     connected_mqtt = 1;
 
-                }
+            //     }
                 
-                cont_envio++;
-                sleep_ms(1);
+            //     cont_envio++;
+            //     sleep_ms(1);
 
-                ssd1306_SetCursor(3, 22);
-                ssd1306_WriteString("PUB 'TEMP/TPC'= ", Font_6x8, White);
-                ssd1306_DrawRectangle(25, 20, 25, 37, 1);	// Desenha o retângulo principal do display
-                ssd1306_WriteString(last_temp, Font_6x8, White);
-                ssd1306_DrawRectangle(1, 37, 127, 63, 1);	// Desenha o retângulo principal do display
-                ssd1306_SetCursor(3, 40);
-                ssd1306_WriteString("SUB 'LED/TPC'= ", Font_6x8, White);
-                ssd1306_DrawRectangle(25, 37, 25, 63, 1);	// Desenha o retângulo principal do display
-                ssd1306_SetCursor(30, 50);
-                ssd1306_WriteString(last_led, Font_6x8, White);
-                if(cont_envio >= 34){
-                    cont_envio = 0;
-                    float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
+            //     ssd1306_SetCursor(3, 22);
+            //     ssd1306_WriteString("PUB 'TEMP/TPC'= ", Font_6x8, White);
+            //     ssd1306_DrawRectangle(25, 20, 25, 37, 1);	// Desenha o retângulo principal do display
+            //     ssd1306_WriteString(last_temp, Font_6x8, White);
+            //     ssd1306_DrawRectangle(1, 37, 127, 63, 1);	// Desenha o retângulo principal do display
+            //     ssd1306_SetCursor(3, 40);
+            //     ssd1306_WriteString("SUB 'LED/TPC'= ", Font_6x8, White);
+            //     ssd1306_DrawRectangle(25, 37, 25, 63, 1);	// Desenha o retângulo principal do display
+            //     ssd1306_SetCursor(30, 50);
+            //     ssd1306_WriteString(last_led, Font_6x8, White);
+            //     if(cont_envio >= 34){
+            //         cont_envio = 0;
+            //         float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
 
-                    //float para string
-                    ftoa(temperature, tempString, 2);
+            //         //float para string
+            //         ftoa(temperature, tempString, 2);
 
-                    mqtt_publish(cliente_mqtt, PUBLISH_STR_NAME, tempString, 5, 0, false, &mqtt_request_cb, NULL);
-                    last_temp = tempString;
-                }
-            }
+            //         mqtt_publish(cliente_mqtt, PUBLISH_STR_NAME, tempString, 5, 0, false, &mqtt_request_cb, NULL);
+            //         last_temp = tempString;
+            //     }
+            // }
         }
         
         // OPÇÃO BUZZER

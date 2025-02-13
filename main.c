@@ -21,7 +21,6 @@ int main() {
     adc_gpio_init(26);                  // Inicializa o pino GPIO 26 para ADC
     adc_gpio_init(27);                  // Inicializa o pino GPIO 27 para ADC
     pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
-    configure_pwm();                    // Configura o PWM para o LED RGB
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -74,11 +73,12 @@ int main() {
 
     printf("Habilitando modo STA...\n");
     cyw43_arch_enable_sta_mode();
+    sleep_ms(500);
 
     // Tenta conectar ao Wi-Fi
     printf("Conectando ao Wi-Fi...\n");
 
-    if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 20000)) {
+    if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 10000)) {
         printf("Erro: Falha ao conectar ao Wi-Fi.\n");
         ssd1306_SetCursor(21, 54);
         ssd1306_WriteString("NOT CONNECTED", Font_6x8, White);
@@ -98,6 +98,7 @@ int main() {
         if (aux_connection == 0){
             menu();     // Renderiza o menu principal
         }
+
         // else {
         //     menu_ap();  // Renderiza o menu do modo AP
 

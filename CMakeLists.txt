@@ -28,14 +28,14 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(ssd1306_i2c C CXX ASM)
+project(projeto_embarcatech C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(ssd1306_i2c
+add_executable(projeto_embarcatech
         main.c
         ssd1306/ssd1306.c
         ssd1306/ssd1306_fonts.c
@@ -43,25 +43,26 @@ add_executable(ssd1306_i2c
         ap_mode/dnsserver/dnsserver.c
         )
 
-pico_set_program_name(ssd1306_i2c "ssd1306_i2c")
-pico_set_program_version(ssd1306_i2c "0.1")
+pico_set_program_name(projeto_embarcatech "projeto_embarcatech")
+pico_set_program_version(projeto_embarcatech "0.1")
         
 
 # pull in common dependencies and additional i2c hardware support
-target_link_libraries(ssd1306_i2c 
+target_link_libraries(projeto_embarcatech 
         pico_stdlib
         tinyusb_board 
         hardware_i2c 
         hardware_adc 
         hardware_pwm
+        hardware_timer
         pico_cyw43_arch_lwip_threadsafe_background
         pico_lwip_mqtt
         )
 
-pico_enable_stdio_usb(ssd1306_i2c 1)
-pico_enable_stdio_uart(ssd1306_i2c 0)
+pico_enable_stdio_usb(projeto_embarcatech 1)
+pico_enable_stdio_uart(projeto_embarcatech 0)
 
-target_include_directories(ssd1306_i2c PRIVATE
+target_include_directories(projeto_embarcatech PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/ap_mode
     ${CMAKE_CURRENT_LIST_DIR}/ap_mode/dhcpserver
@@ -71,6 +72,6 @@ target_include_directories(ssd1306_i2c PRIVATE
 )
 
 # create map/bin/hex file etc.
-pico_add_extra_outputs(ssd1306_i2c)
+pico_add_extra_outputs(projeto_embarcatech)
 
 # add url via pico_set_program_url
