@@ -19,19 +19,7 @@
 #include "lwip/apps/httpd.h"      // Biblioteca de funções para o protocolo HTTP
 #include "lwip/dns.h"             // Biblioteca de Funções DNS
 #include <time.h>                 // Biblioteca para manipulação de tempo
-
-float lat, lon;
-
-// Função para gerar valores aleatórios dentro das faixas especificadas
-void generate_random_coordinates(float *lat, float *lon) {
-    float lat_min = -5.813619388080041;
-    float lat_max = -5.81018697695044;
-    float lon_min = -35.20495186786747;
-    float lon_max = -35.201481075005;
-
-    *lat = lat_min + ((float)rand() / RAND_MAX) * (lat_max - lat_min);
-    *lon = lon_min + ((float)rand() / RAND_MAX) * (lon_max - lon_min);
-}
+#include "defines_functions.h"    // Arquivo contendo definições e funções para o projeto.
 
 // Função de callback para processar respostas HTTP
 static err_t http_client_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {

@@ -24,17 +24,17 @@
  * e o processo de seleção dentro do menu. A navegação na tela e o gerenciamento do cursor
  * também são tratados através dessas variáveis.
  */
-#define NUM_ITEMS  4          ///< Número total de itens no menu, também usado para o número de capturas de tela e códigos QR.
-#define MAX_ITEM_LENGTH  20   ///< Comprimento máximo de caracteres permitido para cada nome de item.
+#define NUM_ITEMS  4           ///< Número total de itens no menu, também usado para o número de capturas de tela e códigos QR.
+#define MAX_ITEM_LENGTH  20    ///< Comprimento máximo de caracteres permitido para cada nome de item.
 
 int item_selected = 0;         ///< Item atual selecionado no menu.
 int item_sel_previous;         ///< Índice do item anterior, usado para exibir o item antes do selecionado.
 int item_sel_next;             ///< Índice do próximo item, usado para exibir o item após o selecionado.
 int current_screen = 0;        ///< Indica o índice da tela atual sendo exibida.
 int cursor = 0;                ///< Posição do cursor no menu para navegação.
-int button_enter_clicked = 0; // só executa ação quando o botão ENTER é clicado, e espera até outro clique
-int up_clicked = 0; // só executa ação quando o botão é clicado, e espera até outro clique
-int down_clicked = 0; // mesmo que acima
+int button_enter_clicked = 0;  ///< só executa ação quando o botão ENTER é clicado, e espera até outro clique
+int up_clicked = 0;            ///< só executa ação quando o botão é clicado, e espera até outro clique
+int down_clicked = 0;          ///< mesmo que acima
 
 
 // ---------------------- Variáveis de Ícones Bitmap -----------------------
@@ -103,10 +103,10 @@ const unsigned char bitmap_scrollbar_background [] = {
  * exibições de tela dentro da aplicação.
  */
 const unsigned char* bitmap_icons[4] = {
-  bitmap_icon_cloud,    // Ponteiro para o ícone do painel.
-  bitmap_icon_setup,   // Ponteiro para o ícone do sensor de estacionamento.
-  bitmap_icon_speaker,    // Ponteiro para o ícone de fogos de artifício.
-  bitmap_icon_Network       // Ponteiro para o ícone da bateria.
+  bitmap_icon_cloud,        // Ponteiro para o ícone da Nuvem.
+  bitmap_icon_setup,        // Ponteiro para o ícone da Engrenagem.
+  bitmap_icon_speaker,      // Ponteiro para o ícone do Auto falante.
+  bitmap_icon_Network       // Ponteiro para o ícone do Wi-Fi.
 };
 
 /**

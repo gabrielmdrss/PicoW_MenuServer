@@ -33,433 +33,6 @@
 #include "defines_functions.h"                  // Arquivo contendo definições e funções para o projeto.
 #include "lwip/tcpip.h"                         // Certifique-se de incluir a biblioteca LWIP
 
-// ---------------------------- Definições de Botões ----------------------------
-
-/**
- * @brief Definições de pinos GPIO para os botões.
- */
-#define BUTTON_A 5  ///< Botão para alterar opções/configurações.
-#define BUTTON_B 6   ///< Botão para confirmar/entrar em uma seleção.
-
-
-//----------------------------- Definições do Buzzer -------------------------------
-
-#define BUZZER_PIN 21    			// Pino do buzzer
-#define MIN_FREQUENCY 10 			// Frequência mínima do buzzer (Hz)
-#define MAX_FREQUENCY 2000 			// Frequência máxima do buzzer (Hz)
-#define ADC_UPPER_THRESHOLD 3500 	// Limite superior do ADC para incrementar a frequência
-#define ADC_LOWER_THRESHOLD 850  	// Limite inferior do ADC para decrementar a frequência
-#define STEP 20              		// Incremento ou decremento por iteração
-float frequency = MIN_FREQUENCY;
-int Limit_Buzzer = 0;
-uint8_t x_distance;
-
-//--------------------------------Variáveis provisórias--------------------------------------------
-
-#define TEMPERATURE_UNITS 'C'     // Unidade para medição de temperatura.
-int start_wifi = 0;
-int connected_mqtt = 0;
-float temperature;
-int percentual = 0;
-
-
-// --------------------------- Função de Leitura da Temperatura Interna ---------------------------
-
-/**
- * @brief Lê o sensor de temperatura interno.
- *
- * @param unit A unidade de temperatura ('C' para Celsius, 'F' para Fahrenheit).
- * @return float A temperatura na unidade especificada.
- *
- * Esta função lê o sensor de temperatura interno e retorna a temperatura
- * na unidade especificada.
- *
- * ### Comportamento:
- * - Habilita o sensor de temperatura interno.
- * - Seleciona a entrada ADC para o sensor de temperatura.
- * - Lê o valor do ADC e converte para temperatura.
- * - Retorna a temperatura na unidade especificada.
- *
- * @note A função assume um ADC de 12 bits com uma tensão de referência de 3.3V.
- */
-float read_onboard_temperature(const char unit) {
-    
-    adc_set_temp_sensor_enabled(true);
-    adc_select_input(4); // Seleciona o sensor de temperatura interno
-
-    /* Conversão de 12 bits, assume valor máximo == ADC_VREF == 3.3 V */
-    const float conversionFactor = 3.3f / (1 << 12);
-
-    float adc = (float)adc_read() * conversionFactor;
-    float tempC = 27.0f - (adc - 0.706f) / 0.001721f;
-
-    if (unit == 'C') {
-        return tempC;
-    } else if (unit == 'F') {
-        return tempC * 9 / 5 + 32;
-    }
-
-    return -1.0f;
-}
-
-// --------------------------- Função de Inversão de String ---------------------------
-
-/**
- * @brief Inverte uma string.
- *
- * @param str A string a ser invertida.
- * @param len O comprimento da string.
- *
- * Esta função inverte a string fornecida.
- *
- * ### Comportamento:
- * - Troca caracteres do início e do fim da string.
- * - Continua trocando até que o meio da string seja alcançado.
- *
- * @note A string invertida é armazenada no parâmetro `str`.
- */
-void reverse(char* str, int len) 
-{ 
-    int i = 0, j = len - 1, temp; 
-    while (i < j) { 
-        temp = str[i]; 
-        str[i] = str[j]; 
-        str[j] = temp; 
-        i++; 
-        j--; 
-    } 
-} 
-
-
-// --------------------------- Função de Conversão de Inteiro para String ---------------------------
-
-/**
- * @brief Converte um inteiro para uma string.
- *
- * @param x O inteiro a ser convertido.
- * @param str A string resultante.
- * @param d Número de dígitos necessários na saída.
- * @return int O comprimento da string resultante.
- *
- * Esta função converte um inteiro para uma string com o número especificado de dígitos.
- * Se o número de dígitos for maior que o número de dígitos no inteiro, zeros
- * são adicionados no início.
- *
- * ### Comportamento:
- * - Converte o inteiro para uma string.
- * - Adiciona zeros à esquerda se necessário.
- * - Inverte a string para obter a ordem correta.
- *
- * @note A string resultante é armazenada no parâmetro `str`.
- */
-int intToStr(int x, char str[], int d) 
-{ 
-    int i = 0; 
-    if (x == 0) {
-    str[i++] = '0'; // Adiciona o dígito 0
-    }
-    while (x) { 
-        str[i++] = (x % 10) + '0'; 
-        x = x / 10; 
-    } 
- 
-    // Se o número de dígitos necessário for maior, então 
-    // adiciona zeros no início 
-    while (i < d) 
-        str[i++] = '0'; 
- 
-    reverse(str, i); 
-    str[i] = '\0'; 
-    return i; 
-}
-
-
-// --------------------------- Função de Conversão de Float para String ---------------------------
-
-/**
- * @brief Converte um número de ponto flutuante para uma string.
- *
- * @param n O número de ponto flutuante a ser convertido.
- * @param res A string resultante.
- * @param afterpoint Número de dígitos após o ponto decimal.
- *
- * Esta função converte um número de ponto flutuante para uma string com o número
- * especificado de dígitos após o ponto decimal.
- *
- * ### Comportamento:
- * - Extrai a parte inteira do número.
- * - Extrai a parte fracionária do número.
- * - Converte a parte inteira para uma string.
- * - Adiciona um ponto decimal se necessário.
- * - Converte a parte fracionária para uma string.
- *
- * @note A string resultante é armazenada no parâmetro `res`.
- */
-void ftoa(float n, char* res, int afterpoint) 
-{ 
-    // Extrai a parte inteira 
-    int ipart = (int)n; 
- 
-    // Extrai a parte fracionária 
-    float fpart = n - (float)ipart; 
- 
-    // Converte a parte inteira para string 
-    int i = intToStr(ipart, res, 0); 
- 
-    // Verifica se é necessário exibir a parte fracionária 
-    if (afterpoint != 0) { 
-        res[i] = '.'; // Adiciona o ponto decimal 
- 
-        // Obtém o valor da parte fracionária até o número de 
-        // pontos após o ponto decimal especificado. O terceiro parâmetro 
-        // é necessário para lidar com casos como 233.007 
-        fpart = fpart * pow(10, afterpoint); 
- 
-        intToStr((int)fpart, res + i + 1, afterpoint); 
-    } 
-}
-
-
-//------------------------------ Variáveis do Modo AP -------------------------------
-
-char *ap_name = "PICO_W_AP";
-char *ap_pw = "raspberry";
-
-//-----------------------------------------------------------------------------------
-
-volatile bool timer_expired = false;
-
-//-----------------------------------------------------------------------------------
-
-bool timer_callback(repeating_timer_t *rt) {
-    timer_expired = true;
-    return true; // Retorna true para continuar chamando o callback
-}
-
-void start_timer() {
-    static repeating_timer_t timer;
-    add_repeating_timer_ms(2000, timer_callback, NULL, &timer); // Timer de 1 segundo
-}
-// -------------------------- Função de Filtro Passa-Baixa --------------------------
-
-/**
- * @brief Aplica um filtro passa-baixa para suavizar dados de entrada.
- *
- * @param new_value O novo valor de entrada a ser filtrado.
- * @return uint16_t O valor de saída filtrado.
- *
- * Esta função aplica um algoritmo de suavização usando uma média móvel exponencial.
- * O fator de suavização `alpha` determina a influência do novo valor em relação ao valor filtrado anterior.
- */
-uint low_pass_filter(uint new_value) {
-    float alpha = 0.5;            ///< Fator de suavização (0.0 a 1.0)
-    static uint filtered_value = 0; ///< Valor suavizado (preservado entre as chamadas)
-
-    filtered_value = (alpha * new_value) + ((1 - alpha) * filtered_value);
-    return filtered_value;
-}
-
-
-// ------------------------------ Funções do Buzzer ------------------------------
-
-/**
- * @brief Inicializa o PWM para o buzzer.
- *
- * Esta função configura a configuração do PWM para o buzzer conectado ao pino GPIO especificado.
- * Ela configura o pino GPIO para funcionalidade PWM, inicializa o slice PWM e define o nível inicial
- * do PWM para baixo.
- *
- * @param pin O pino GPIO conectado ao buzzer.
- *
- * @note A função realiza as seguintes operações:
- * - Configura o pino GPIO para funcionalidade PWM.
- * - Recupera o número do slice PWM para o pino GPIO especificado.
- * - Define a configuração padrão do PWM.
- * - Inicializa o slice PWM com a configuração.
- * - Define o nível inicial do PWM para baixo.
- *
- * @note A função depende das seguintes funções:
- *   - `gpio_set_function(pin, GPIO_FUNC_PWM)`: Configura o pino GPIO para funcionalidade PWM.
- *   - `pwm_gpio_to_slice_num(pin)`: Recupera o número do slice PWM para o pino GPIO especificado.
- *   - `pwm_get_default_config()`: Recupera a configuração padrão do PWM.
- *   - `pwm_config_set_clkdiv(&config, divisor)`: Define o divisor de clock para a configuração do PWM.
- *   - `pwm_init(slice_num, &config, true)`: Inicializa o slice PWM com a configuração.
- *   - `pwm_set_gpio_level(pin, level)`: Define o nível do PWM para o pino GPIO especificado.
- */
-void pwm_init_buzzer(uint pin) {
-    gpio_set_function(pin, GPIO_FUNC_PWM);
-    uint slice_num = pwm_gpio_to_slice_num(pin);
-    pwm_config config = pwm_get_default_config();
-    pwm_config_set_clkdiv(&config, 1.0f); // Divisor inicial
-    pwm_init(slice_num, &config, true);
-    pwm_set_gpio_level(pin, 0); // Inicia com nível baixo
-}
-
-
-/**
- * @brief Define a frequência do buzzer.
- *
- * Esta função configura as configurações do PWM para gerar uma frequência específica
- * no buzzer conectado ao pino GPIO especificado. Ela calcula o divisor de clock apropriado
- * e o valor máximo para o PWM com base na frequência desejada.
- *
- * @param pin O pino GPIO conectado ao buzzer.
- * @param frequency A frequência desejada para o buzzer em Hertz.
- *
- * @note A função realiza as seguintes operações:
- * - Calcula o divisor de clock e o valor máximo para o PWM com base na frequência desejada.
- * - Configura as configurações do PWM com os valores calculados.
- * - Define o ciclo de trabalho do PWM para 50% para gerar o tom.
- *
- * @note A função depende das seguintes funções:
- *   - `clock_get_hz(clk_sys)`: Recupera a frequência do clock do sistema.
- *   - `pwm_gpio_to_slice_num(pin)`: Recupera o número do slice PWM para o pino GPIO especificado.
- *   - `pwm_set_clkdiv(slice_num, divisor)`: Define o divisor de clock para o slice PWM.
- *   - `pwm_set_wrap(slice_num, top)`: Define o valor máximo para o slice PWM.
- *   - `pwm_set_gpio_level(pin, level)`: Define o ciclo de trabalho do PWM para o pino GPIO especificado.
- */
-void set_buzzer_frequency(uint pin, float frequency) {
-    uint slice_num = pwm_gpio_to_slice_num(pin);
-
-    // Calcula o valor de "top" e ajusta o divisor
-    uint32_t source_hz = clock_get_hz(clk_sys);
-    float divisor = (float)source_hz / (frequency * 4096.0f);
-    uint32_t top = source_hz / (frequency * divisor);
-
-    pwm_set_clkdiv(slice_num, divisor); // Define o divisor
-    pwm_set_wrap(slice_num, top - 1);  // Define o contador superior
-    pwm_set_gpio_level(pin, top / 2);  // Ciclo de trabalho de 50%
-}
-
-
-/**
- * @brief Toca uma sequência de sons ao entrar no menu.
- *
- * Esta função gera uma sequência de tons usando um buzzer para indicar
- * que o menu está sendo acessado. Os tons variam com base na frequência atual
- * e podem ser crescentes, decrescentes ou uma combinação de ambos.
- *
- * @param pin O pino GPIO conectado ao buzzer.
- *
- * @note A função realiza as seguintes operações:
- * - Determina a sequência de frequências com base na frequência atual.
- * - Define a frequência do buzzer e ativa o buzzer para cada tom na sequência.
- * - Introduz um atraso entre cada tom.
- * - Desativa o buzzer após a sequência ser concluída.
- *
- * @note A função depende das seguintes variáveis externas:
- *   - `frequency`: A frequência atual usada para determinar a sequência de tons.
- */
-void menu_enter_sound(uint pin) {
-    
-    uint frequencies[3];
-
-    if (frequency <= 210) {
-        frequencies[0] = frequency + 300;
-        frequencies[1] = 10;
-        frequencies[2] = 110; // Tons crescentes
-    } else if (frequency >= 1710) {
-        frequencies[0] = 2010;
-        frequencies[1] = frequency - 200;
-        frequencies[2] = frequency - 100; // Tons decrescentes
-    } else {
-        frequencies[0] = frequency + 300;
-        frequencies[1] = frequency - 200;
-        frequencies[2] = frequency - 100; // Combinação de tons
-    }
-
-    uint duration_ms = 75; // Duração de cada tom
-
-    for (int i = 0; i < 3; i++) {
-        set_buzzer_frequency(pin, frequencies[i]); 	// Configura o tom
-        pwm_set_gpio_level(pin, 2048);            	// Ativa o buzzer
-        sleep_ms(duration_ms);                   	// Duração do tom
-    }
-    pwm_set_gpio_level(pin, 0); // Desativa o buzzer
-}
-
-
-/**
- * @brief Toca uma sequência de sons ao sair do menu.
- *
- * Esta função gera uma sequência de tons usando um buzzer para indicar
- * que o menu está sendo fechado. Os tons variam com base na frequência atual
- * e podem ser crescentes, decrescentes ou uma combinação de ambos.
- *
- * @param pin O pino GPIO conectado ao buzzer.
- *
- * @note A função realiza as seguintes operações:
- * - Determina a sequência de frequências com base na frequência atual.
- * - Define a frequência do buzzer e ativa o buzzer para cada tom na sequência.
- * - Introduz um atraso entre cada tom.
- * - Desativa o buzzer após a sequência ser concluída.
- *
- * @note A função depende das seguintes variáveis externas:
- *   - `frequency`: A frequência atual usada para determinar a sequência de tons.
- */
-void menu_exit_sound(uint pin) {
-
-    // Frequências para o som de saída  
-    uint frequencies[3];
-
-    if (frequency <= 310) {
-        frequencies[0] = 10;
-        frequencies[1] = frequency + 200;
-        frequencies[2] = frequency + 100; // Tons crescentes
-    } else if (frequency >= 1810) {
-        frequencies[0] = frequency - 300;
-        frequencies[1] = 2010;
-        frequencies[2] = 1910; // Tons decrescentes
-    } else {
-        frequencies[0] = frequency - 300;
-        frequencies[1] = frequency + 200;
-        frequencies[2] = frequency + 100; // Combinação de tons
-    }
-
-    uint duration_ms = 75; // Duração de cada tom
-
-    for (int i = 0; i < 3; i++) {
-        set_buzzer_frequency(pin, frequencies[i]); // Configura o tom
-        pwm_set_gpio_level(pin, 2048);            // Ativa o buzzer
-        sleep_ms(duration_ms);                   // Duração do tom
-    }
-    pwm_set_gpio_level(pin, 0); // Desativa o buzzer
-}
-
-
-// ---------------------------- Função de Escape ----------------------------
-
-/**
- * @brief Lida com a funcionalidade de escape para a tela inicial.
- *
- * Esta função atualiza o display SSD1306, introduz um atraso e alterna
- * o estado da tela atual. Ela é tipicamente usada para fornecer feedback visual
- * e transição entre diferentes telas de menu.
- *
- * @note A função depende das seguintes variáveis externas:
- *   - `current_screen`: Uma flag indicando o estado da tela atual.
- */
-void scape_function(void){
-    ssd1306_UpdateScreen();
-    sleep_ms(2000);
-    current_screen = !current_screen;
-}
-
-
-void not_initialized(void){
-
-    ssd1306_SetCursor(4, 23);
-    ssd1306_WriteString("Inicialize BitDogLab!", Font_6x8, White);
-
-    ssd1306_SetCursor(37, 40);
-    ssd1306_WriteString("Pressione:", Font_6x8, White);
-
-    ssd1306_SetCursor(22, 50);
-    ssd1306_WriteString("<System Setup>", Font_6x8, White);
-    scape_function();
-
-}
-
 // ---------------------------- Função de Renderização da Tela Inicial ----------------------------
 
 /**
@@ -614,150 +187,179 @@ void update_cursor(void){
  */
 void menu(void) {
 
+    // Se a tela atual for a tela inicial
     if (current_screen == 0) {
 
         update_cursor();    // Atualiza o cursor com o joystick
         home_screen();      // Atualiza a Tela Inicial no Display OLED
     }
 
+    // Se a tela atual for a tela específica
     if(current_screen) {
 
-        // Preenche o display com uma cor específica
+        // Limpa o Display
         ssd1306_Fill(Black);
 
-        // OPÇÃO Servidor Web
+        // Se o item selecionado for "Cloud"
         if (item_selected == 0){
 
             // Exibe o cabeçalho
-            char buffer_string[7];                // Buffer para armazenar valores formatados em string
             cabecalho("CLOUD:", 45, 1);
 
+            char buffer_string[7];      // Buffer para armazenar valores formatados em string
+            
+            // Se o sistema estiver inicializado (Passado pela opção System Setup)
             if(inicialized){
 
+                // Se a interrupção do timer já foi ativa (a cada 2 segundos)
                 if(timer_expired){
+
+                    // Lê a temperatura interna do sistema
                     temperature = read_onboard_temperature(TEMPERATURE_UNITS);
 
+                    // Passará a temperatura para a função que construirá a requisição HTTP
                     build_http_request(temperature);
-                    timer_expired = false;
+                    timer_expired = false;      // Reseta a flag de interrupção do timer
                 }
 
+                // Exibe a temperatura no display
                 ssd1306_SetCursor(3, 24);
                 sprintf(buffer_string, "- Temp: %.2f %c", temperature, TEMPERATURE_UNITS);
                 ssd1306_WriteString(buffer_string, Font_6x8, White);
                 sprintf(buffer_string, "- Latitude: %.4f", lat);
-                ssd1306_DrawRectangle(1, 34, 127, 34, White);
+                ssd1306_DrawRectangle(1, 34, 127, 34, White);   // Separador Horizontal
+
+                // Exibe a latitude no display
                 ssd1306_SetCursor(3, 38);
                 ssd1306_WriteString(buffer_string, Font_6x8, White);
-                ssd1306_DrawRectangle(1, 48, 127, 48, White);
+                ssd1306_DrawRectangle(1, 48, 127, 48, White);   // Separador Horizontal
+
+                // Exibe a longitude no display
                 sprintf(buffer_string, "- Longitude: %.4f", lon);
                 ssd1306_SetCursor(3, 52);
                 ssd1306_WriteString(buffer_string, Font_6x8, White);
 
-                cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
+                cyw43_arch_poll();      // Polling do módulo CYW43 (Manter conexão Wi-Fi ativa)
 
+              // Se o sistema não estiver inicializado  
             } else {
 
+                // Função que printa na tela um aviso de não inicialização
                 not_initialized();
 
             }
         } 
 
-        // OPÇÃO Conexão MQTT
+        // Se o item selecionado for "System Setup"
         else if (item_selected == 1){
 
+            // Exibe o cabeçalho
             cabecalho("SYSTEM SETUP:", 20, 1);
 
+            // Se for a primeira vez que o usuário acessa a opção
             if(inicialized == 0){
 
                 char buffer_float[7];	// Buffer para armazenar valores formatados em string
             
+                // Percentual de inicialização - Laço bloqueante para inicializar o sistema
                 while(percentual < 100){
 
+                    // Garantir a impressão do cabeçalho dentro do laço
                     cabecalho("SYSTEM SETUP:", 20, 1);
                     
-                    ssd1306_SetCursor(11, 28);
-                    snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
-                    ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                    ssd1306_SetCursor(11, 28);  
+                    snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);   // Armazenar valor do percentual em string
+                    ssd1306_WriteString(buffer_float, Font_6x8, 1);                     // Escrever o valor no display
                     ssd1306_WriteString("%", Font_7x10, 1);
 
 
+                    // Se o percentual for 20 = Inicialização do sensor de temperatura
                     if(percentual == 20){
-                        ssd1306_Fill(Black);
-                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_Fill(Black);                                                            // Limpa o display
+                        cabecalho("SYSTEM SETUP:", 20, 1);                                              // Exibe o cabeçalho
                         ssd1306_SetCursor(33, 28);
-                        ssd1306_WriteString("- Temp INIT", Font_6x8, White);
-                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
-                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_WriteString("- Temp INIT", Font_6x8, White);                            // Exibição do processo em andamento
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);                                      // Desenha a barra de progresso
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);   // Preenche a barra de progresso com o percentual
                         ssd1306_SetCursor(11, 28);
-                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
-                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);               // Armazena o percentual em string
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);                                 // Exibe o percentual no display
                         ssd1306_WriteString("%", Font_7x10, 1);
-                        adc_set_temp_sensor_enabled(true);  // Habilita o sensor de temperatura interno
-                        adc_select_input(4);                // Seleciona o sensor de temperatura interno como entrada ADC
-                        adc_gpio_init(26);                  // Inicializa o pino GPIO 26 para ADC
-                        adc_gpio_init(27);                  // Inicializa o pino GPIO 27 para ADC
+                        adc_set_temp_sensor_enabled(true);                                              // Habilita o sensor de temperatura interno
+                        adc_select_input(4);                                                            // Seleciona o sensor de temperatura interno como entrada ADC
+                        adc_gpio_init(26);                                                              // Inicializa o pino GPIO 26 para ADC
+                        adc_gpio_init(27);                                                              // Inicializa o pino GPIO 27 para ADC
 
 
+                    // Se o percentual for 50 = Inicialização do gerador de números aleatórios
                     } else if (percentual == 50) {
-                        ssd1306_Fill(Black);
-                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_Fill(Black);                                                            // Limpa o display
+                        cabecalho("SYSTEM SETUP:", 20, 1);                                              // Exibe o cabeçalho
                         ssd1306_SetCursor(33, 28);
-                        ssd1306_WriteString("- Random INIT", Font_6x8, White);
-                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
-                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_WriteString("- Random INIT", Font_6x8, White);                          // Exibição do processo em andamento
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);                                      // Desenha a barra de progresso
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);   // Preenche a barra de progresso com o percentual
                         ssd1306_SetCursor(11, 28);
-                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
-                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
-                        ssd1306_WriteString("%", Font_7x10, 1);
-                        srand(time(NULL));                  // Inicializa o gerador de números aleatórios
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);               // Armazena o percentual em string
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);                                 // Exibe o percentual no display
+                        ssd1306_WriteString("%", Font_7x10, 1);                                         // Exibe o símbolo de porcentagem
+                        srand(time(NULL));                                                              // Inicializa o gerador de números aleatórios
 
+                    // Se o percentual for 75 = Inicialização do buzzer
                     } else if (percentual == 75) {
-                        ssd1306_Fill(Black);
-                        cabecalho("SYSTEM SETUP:", 20, 1);
-                        ssd1306_SetCursor(33, 28);
-                        ssd1306_WriteString("- Buzzer INIT", Font_6x8, White);
-                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
-                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_Fill(Black);                                                            // Limpa o display
+                        cabecalho("SYSTEM SETUP:", 20, 1);                                              // Exibe o cabeçalho
+                        ssd1306_SetCursor(33, 28);  
+                        ssd1306_WriteString("- Buzzer INIT", Font_6x8, White);                          // Exibição do processo em andamento
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);                                      // Desenha a barra de progresso
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);   // Preenche a barra de progresso com o percentual
                         ssd1306_SetCursor(11, 28);
-                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
-                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);               // Armazena o percentual em string
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);                                 // Exibe o percentual no display
                         ssd1306_WriteString("%", Font_7x10, 1);
-                        pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
+                        pwm_init_buzzer(BUZZER_PIN);                                                    // Inicializa o PWM para o buzzer
 
+                    // Se o percentual for 90 = Inicialização do Wi-Fi
                     } else if (percentual == 90) {
-                        ssd1306_Fill(Black);
-                        cabecalho("SYSTEM SETUP:", 20, 1);
+                        ssd1306_Fill(Black);                                                            // Limpa o display
+                        cabecalho("SYSTEM SETUP:", 20, 1);                                              // Exibe o cabeçalho
                         ssd1306_SetCursor(33, 28);
-                        ssd1306_WriteString("- WiFi INIT...", Font_6x8, White);
-                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);
-                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
+                        ssd1306_WriteString("- WiFi INIT...", Font_6x8, White);                         // Exibição do processo em andamento
+                        ssd1306_DrawRectangle(11, 40, 117, 55, 1);                                      // Desenha a barra de progresso
+                        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);   // Preenche a barra de progresso com o percentual
                         ssd1306_SetCursor(11, 28);
-                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);
-                        ssd1306_WriteString(buffer_float, Font_6x8, 1);
+                        snprintf(buffer_float, sizeof(buffer_float), "%d\n", percentual);               // Armazena o percentual em string
+                        ssd1306_WriteString(buffer_float, Font_6x8, 1);                                 // Exibe o percentual no display
                         ssd1306_WriteString("%", Font_7x10, 1);
-                        ssd1306_UpdateScreen();
+                        ssd1306_UpdateScreen();                                                         // Atualiza o display devido ação bloqueante do Wi-Fi
 
+                        // Inicializa o Wi-Fi
                         if (cyw43_arch_init()) {
                             printf("Wi-Fi init failed\n");
                             return;
                         }
 
                         printf("Habilitando modo STA...\n");
-                        cyw43_arch_enable_sta_mode();   // Habilita o modo STA
+
+                        // Habilita o modo STA
+                        cyw43_arch_enable_sta_mode();   
 
                         // Tenta conectar ao Wi-Fi
                         printf("Conectando ao Wi-Fi...\n");
 
-                        if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 10000)) {
+                        // Conecta ao Wi-Fi
+                        if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 10000)) {
                             printf("Erro: Falha ao conectar ao Wi-Fi.\n");
-                            break;
+                            break;  // Encerra o laço
                         }
+
                         printf("Conectado a %s\n", ssid);
                         
-                        start_wifi = 1;
-                        start_timer();
+                        start_wifi = 1;     // Marca a flag de conexão Wi-Fi como ativa
+                        start_timer();      // Inicializa o timer para a requisição HTTP
                     }
                     
+                    // Atualização do percentual quando nenhum dos blocos IF é ativo
                     ssd1306_DrawRectangle(11, 40, 117, 55, 1);
 			        ssd1306_FillRectangle(11, 40, (11 + (percentual * (117 - 11)) / 100), 55, 1);
                     sleep_ms(100);
@@ -765,46 +367,18 @@ void menu(void) {
                     ssd1306_UpdateScreen();
                 }
                 
+                // Se o percentual não for 100 = Algo interrompeu a finalização do laço
                 if(percentual != 100){
                     ssd1306_SetCursor(57, 28);
                     ssd1306_WriteString("INITIALIZATION FAILED", Font_6x8, White);
-                    scape_function();
+                    scape_function();   // Função de escape
 
+                // Se não houver interrupção, a inicialização foi bem sucedida
                 } else {
-                    inicialized = 1;
+                    inicialized = 1;    // Marca o sistema como inicializado
                 }
 
-
-                // pwm_init_buzzer(BUZZER_PIN);        // Inicializa o PWM para o buzzer
-
-                // // Reinitialize o Wi-Fi no modo STA (Station)
-
-                // if (cyw43_arch_init()) {
-                //     printf("Wi-Fi init failed\n");
-                //     return;
-                // }
-
-                // printf("Habilitando modo STA...\n");
-                // cyw43_arch_enable_sta_mode();   // Habilita o modo STA
-
-                // // Tenta conectar ao Wi-Fi
-                // printf("Conectando ao Wi-Fi...\n");
-                
-
-                // if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 10000)) {
-                //     printf("Erro: Falha ao conectar ao Wi-Fi.\n");
-                //     ssd1306_SetCursor(21, 54);
-                //     ssd1306_WriteString("NOT CONNECTED", Font_6x8, White);
-                //     ssd1306_UpdateScreen();
-                //     return;
-                // }
-                // ssd1306_SetCursor(35, 54);
-                // ssd1306_WriteString("CONNECTED", Font_6x8, White);
-                // printf("Conectado a %s\n", ssid);
-                // scape_function();
-
-                // inicialized = 1;
-
+            // Após a inicialização, se a opção for acessada, deverá constar como já inicializada
             } else {
 
                 ssd1306_SetCursor(7, 33);
@@ -814,24 +388,22 @@ void menu(void) {
 
         }
         
-        // OPÇÃO BUZZER
+        // Se o item selecionado for "Buzzer PWM"
         else if (item_selected == 2){
 
-            char buffer_string[7];	// Buffer para armazenar valores formatados em string
-            ssd1306_SetCursor(25, 1);
-            ssd1306_WriteString("BUZZER PWM: ", Font_7x10, 1);
-            ssd1306_FillRectangle(1, 15, 128, 16, 1);	// Desenha o retângulo do cabeçalho
-            ssd1306_DrawRectangle(1, 20, 127, 63, 1);	// Desenha o retângulo principal do display
+            // Exibe o cabeçalho
+            cabecalho("BUZZER PWM:", 25, 1);
+            char buffer_string[7];	                                // Buffer para armazenar valores formatados em string
+            
 
+            // Se o sistema estiver inicializado (Passado pela opção System Setup)
             if(inicialized){
-                // Função externa para usar e amostrar a funcionalidade do filtro de Kalman
+                
+                adc_select_input(1);                                // Seleciona o pino GPIO 27 (Eixo X do Joystick) como entrada ADC
+                uint adc_x_raw = adc_read();                        // Lê o valor bruto do ADC do eixo X do joystick
+                uint filtered_read = low_pass_filter(adc_x_raw);    // Aplica um filtro passa-baixa ao valor bruto do ADC
 
-                // Lê o valor ADC e filtra
-                adc_select_input(1);
-                uint adc_x_raw = adc_read();
-                uint filtered_read = low_pass_filter(adc_x_raw);
-
-                // Ajuste da frequência
+                // Ajuste de frequência para indicar um passo no progresso da barra
                 if (adc_x_raw > ADC_UPPER_THRESHOLD && frequency < MAX_FREQUENCY) {
                     frequency += STEP;
                 } else if (adc_x_raw < ADC_LOWER_THRESHOLD && frequency > MIN_FREQUENCY) {
@@ -843,77 +415,86 @@ void menu(void) {
 
                 // Atualiza a barra no display
                 uint8_t x_distance = (uint8_t)(((frequency - MIN_FREQUENCY) * 128) / (MAX_FREQUENCY - MIN_FREQUENCY)) + 1;
-                ssd1306_DrawRectangle(1, 48, 128, 63, 1);
-                ssd1306_FillRectangle(1, 48, x_distance, 63, 1); // Barra horizontal
+                ssd1306_DrawRectangle(1, 48, 128, 63, 1);               // Desenha a barra de progresso
+                ssd1306_FillRectangle(1, 48, x_distance, 63, 1);        // Preenche o progresso na barra
 
                 // Mostra a frequência atual
                 ssd1306_SetCursor(25, 30);
-                sprintf(buffer_string, "FREQ: %u Hz", (uint)frequency);
-                ssd1306_WriteString(buffer_string, Font_7x10, 1);
+                sprintf(buffer_string, "FREQ: %u Hz", (uint)frequency);  // Formata a frequência em string
+                ssd1306_WriteString(buffer_string, Font_7x10, 1);        // Exibe a frequência no display
             
+            // Se o sistema não estiver inicializado
             } else {
-                not_initialized();
+                not_initialized();  // Função que printa na tela um aviso de não inicialização
             }
         }
         
-        // OPÇÃO Informações da Rede
+        // Se o item selecionado for "Network Info"
         else if (item_selected == 3){
 
+            // Exibe o cabeçalho
             cabecalho("NETWORK INFO:", 22, 1);
 
+            // Se o sistema estiver inicializado (Passado pela opção System Setup)
             if(inicialized){
 
-                ssd1306_DrawRectangle(32, 20, 32, 63, 1);	// Separador Vertical
+                ssd1306_DrawRectangle(32, 20, 32, 63, 1);	        // Separador Vertical
 
-                char buffer_string[7];                      // Buffer para armazenar valores formatados em string
+                char buffer_string[7];                              // Buffer para armazenar valores formatados em string
                 uint8_t *ip_address = (uint8_t*)&(cyw43_state.netif[0].ip_addr.addr);
                 sprintf(buffer_string, "%d.%d.%d.%d", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
                 ssd1306_SetCursor(3, 23);
-                ssd1306_WriteString("IP", Font_6x8, 1);
+                ssd1306_WriteString("IP", Font_6x8, 1);             // Exibe o texto "IP"
                 ssd1306_SetCursor(53, 23);
-                ssd1306_WriteString(buffer_string, Font_6x8, 1);
-                ssd1306_DrawRectangle(1, 34, 127, 34, 1);	// Separador horizontal
-                
-                int32_t rssi;
-                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
-                sprintf(buffer_string, "%d dBm", rssi);
+                ssd1306_WriteString(buffer_string, Font_6x8, 1);    // Exibe o endereço IP
+
+                ssd1306_DrawRectangle(1, 34, 127, 34, 1);	        // Separador horizontal
+                int32_t rssi;                                       // Variável para armazenar o RSSI
+                cyw43_wifi_get_rssi(&cyw43_state, &rssi);           // Lê o RSSI do módulo CYW43
+                sprintf(buffer_string, "%d dBm", rssi);             // Formata o RSSI em string
                 ssd1306_SetCursor(3, 37);
-                ssd1306_WriteString("RSSI", Font_6x8, 1);
+                ssd1306_WriteString("RSSI", Font_6x8, 1);           // Exibe o texto "RSSI"
                 ssd1306_SetCursor(81, 37);
-                ssd1306_WriteString(buffer_string, Font_6x8, 1);
-                ssd1306_DrawRectangle(1, 46, 127, 46, 1);	// Separador horizontal
+                ssd1306_WriteString(buffer_string, Font_6x8, 1);    // Exibe o valor do RSSI
+                ssd1306_DrawRectangle(1, 46, 127, 46, 1);	        // Separador horizontal
 
                 ssd1306_SetCursor(3, 50);
-                ssd1306_WriteString("WIFI", Font_6x8, 1);
+                ssd1306_WriteString("WIFI", Font_6x8, 1);           // Exibe o texto "WIFI"
 
+                // Se o Wi-Fi estiver conectado
                 if(start_wifi){
 
                     ssd1306_SetCursor(70, 50);
-                    ssd1306_WriteString("CONNECTED", Font_6x8, 1);
+                    ssd1306_WriteString("CONNECTED", Font_6x8, 1);  // Exibe o texto "CONNECTED"
                 } else {
                     ssd1306_SetCursor(52, 50);
-                    ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);
+                    ssd1306_WriteString("DISCONNECTED", Font_6x8, 1);  // Exibe o texto "DISCONNECTED"
                 }
             
+            // Se o sistema não estiver inicializado
             } else {
-                not_initialized();
+                not_initialized();  // Função que printa na tela um aviso de não inicialização
             }
     }
     }
 
+    // Função que analisa o estado do botão ENTER
     if (!(gpio_get(BUTTON_B)) && button_enter_clicked == 0) {
 
-        button_enter_clicked = 1;
+        button_enter_clicked = 1;           // Marca o botão ENTER como pressionado
 
         // Desliga o buzzer
-        pwm_set_gpio_level(BUZZER_PIN, 0);
+        pwm_set_gpio_level(BUZZER_PIN, 0);  // Desativa o buzzer
 
+        // Se o item selecionado for diferente de "Buzzer PWM"
         if(item_selected != 2){
         
+        // Se a tela atual for a tela inicial
         if(current_screen)
-            menu_enter_sound(BUZZER_PIN);
+            menu_enter_sound(BUZZER_PIN);   // Toca o som de entrada
+        // Se a tela atual for a tela específica
         else
-            menu_exit_sound(BUZZER_PIN);
+            menu_exit_sound(BUZZER_PIN);    // Toca o som de saída
         }
 
         // Alterna para o outro tipo de tela
@@ -921,43 +502,70 @@ void menu(void) {
         
     }
 
-    // Se o botão ENTER foi liberado, a variável auxiliar retorna para baixo
+    // Se o botão ENTER for liberado, a variável auxiliar retorna para baixo, dando chance de clicar novamente
     if ((gpio_get(BUTTON_B)) && button_enter_clicked == 1) {
         button_enter_clicked = 0;
     }
 
 /*------------------------- Lógica para imprimir os itens corretos ----------------------------*/
 
-    item_sel_previous = item_selected - 1;
+    item_sel_previous = item_selected - 1;  // O item anterior é o item selecionado menos 1
+
+    // Se o item anterior for menor que 0 = O item anterior estaria abaixo do primeiro = torná-lo o último
     if (item_sel_previous < 0) {
         item_sel_previous = NUM_ITEMS - 1;
-    } // o item anterior estaria abaixo do primeiro = torná-lo o último
-    item_sel_next = item_selected + 1;
+    } 
+    item_sel_next = item_selected + 1;      // O próximo item é o item selecionado mais 1
+
+    // Se o próximo item for maior ou igual ao número total de itens = O próximo item estaria após o último = torná-lo o primeiro
     if (item_sel_next >= NUM_ITEMS) {
         item_sel_next = 0;
-    } // o próximo item estaria após o último = torná-lo o primeiro
+    }
 
 /*---------------------------------------------------------------------------------------*/
 
-    ssd1306_UpdateScreen();
+    ssd1306_UpdateScreen(); // Atualiza o display
 }
 
+// ---------------------- Função de Renderização do Menu no AP Mode -----------------------
+
+/**
+ * @brief Renderiza o menu no modo AP (Access Point) em um display SSD1306.
+ *
+ * Esta função é responsável por desenhar a interface do modo AP em um display SSD1306
+ * usando o protocolo I2C. Ela exibe o SSID, a senha e o endereço IP do ponto de acesso.
+ *
+ * ### Comportamento:
+ * - Exibe o cabeçalho "AP-MODE:".
+ * - Exibe o SSID da rede Wi-Fi.
+ * - Exibe a senha da rede Wi-Fi.
+ * - Exibe o endereço IP do ponto de acesso.
+ * - Atualiza o display para refletir as mudanças.
+ *
+ * @note A função depende das funções do driver SSD1306:
+ *   - `ssd1306_SetCursor`: Posiciona o cursor em uma localização (x, y) especificada no display.
+ *   - `ssd1306_WriteString`: Escreve uma string em uma posição especificada (x, y).
+ *   - `ssd1306_UpdateScreen`: Atualiza o display para refletir as mudanças.
+ *
+ * @note Assume que as variáveis `ap_name` e `ap_pw` estão definidas e contêm o SSID e a senha da rede Wi-Fi, respectivamente.
+ */
 void menu_ap (void){
 
-    char buffer_sg[7];
-    ssd1306_SetCursor(40, 1);
-    ssd1306_WriteString("AP-MODE", Font_7x10, White);
-    ssd1306_FillRectangle(1, 15, 128, 16, White);
-    ssd1306_DrawRectangle(1, 20, 127, 63, White);
-    ssd1306_SetCursor(4, 22);
-    ssd1306_WriteString("ssid: ", Font_6x8, White);
-    ssd1306_WriteString(ap_name, Font_6x8, White);
-    ssd1306_SetCursor(4, 33);
-    ssd1306_WriteString("pw: ", Font_6x8, White);
-    ssd1306_WriteString(ap_pw, Font_6x8, White);
-    ssd1306_SetCursor(4, 44);
-    ssd1306_WriteString("192.168.4.1", Font_6x8, White);
-    ssd1306_UpdateScreen();
+    // Exibe o cabeçalho
+    cabecalho("AP-MODE:", 40, 1);    
+    char buffer_sg[7];                                      // Buffer para armazenar valores formatados em string   
 
+    ssd1306_SetCursor(4, 22);   
+    ssd1306_WriteString("ssid: ", Font_6x8, White);         // Exibe o texto "ssid"
+    ssd1306_WriteString(ap_name, Font_6x8, White);          // Exibe o nome da rede Wi-Fi
+
+    ssd1306_SetCursor(4, 33);
+    ssd1306_WriteString("pw: ", Font_6x8, White);           // Exibe o texto "pw"
+    ssd1306_WriteString(ap_pw, Font_6x8, White);            // Exibe a senha da rede Wi-Fi
+
+    ssd1306_SetCursor(4, 44);
+    ssd1306_WriteString("192.168.4.1", Font_6x8, White);    // Exibe o endereço IP do AP
+    
+    ssd1306_UpdateScreen();                                 // Atualiza o display
 }
 #endif /*MENU_H*/
