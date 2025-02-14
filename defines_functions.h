@@ -12,10 +12,56 @@
 #include "ssd1306/ssd1306_fonts.h"				// Arquivo contendo fontes para o display SSD1306.
 #include "ssd1306/ssd1306.h"					// Arquivo contendo funções para o display SSD1306.
 #include "hardware/timer.h"                     // Biblioteca para operações com temporizadores.     
+#include "defines_functions.h"                  // Arquivo contendo definições e funções para o projeto.
+#include "lwip/tcpip.h"                         // Certifique-se de incluir a biblioteca LWIP
 
-float lat, lon;
 
-// Função para gerar valores aleatórios dentro das faixas especificadas
+/*-------------------------------------- DEFINES ----------------------------------------*/
+
+#define BUTTON_A 5                  // Botão para alterar opções/configurações.
+#define BUTTON_B 6                  // Botão para confirmar/entrar em uma seleção.
+#define BUZZER_PIN 21    			// Pino do buzzer
+#define MIN_FREQUENCY 10 			// Frequência mínima do buzzer (Hz)
+#define MAX_FREQUENCY 2000 			// Frequência máxima do buzzer (Hz)
+#define ADC_UPPER_THRESHOLD 3500 	// Limite superior do ADC para incrementar a frequência
+#define ADC_LOWER_THRESHOLD 850  	// Limite inferior do ADC para decrementar a frequência
+#define STEP 20              		// Incremento ou decremento por iteração
+#define TEMPERATURE_UNITS 'C'       // Unidade para medição de temperatura.
+
+/*------------------------------------- VARIÁVEIS ---------------------------------------*/
+
+float lat, lon;                         // Variáveis para armazenar latitude e longitude
+float frequency = MIN_FREQUENCY;        // Frequência inicial do buzzer
+int Limit_Buzzer = 0;                   // Limite do buzzer
+uint8_t x_distance;                     // Distância no eixo X da barra de progresso
+int start_wifi = 0;                     // Flag para indicar se o Wi-Fi está conectado
+float temperature;                      // Variável para armazenar a temperatura
+int percentual = 0;                     // Variável para armazenar o percentual da barra de progresso
+char *ap_name = "PICO_W_AP";            // Nome da rede Wi-Fi no modo AP
+char *ap_pw = "raspberry";              // Senha da rede Wi-Fi no modo AP
+volatile bool timer_expired = false;    // Flag para indicar que o timer expirou
+int inicialized = 0;                    // Flag para indicar se o sistema foi inicializado
+
+
+/*--------------------------------------- FUNÇÕES ----------------------------------------*/
+
+
+// --------------------------- Função de Geração de Coordenadas Aleatórias ---------------------------
+
+/**
+ * @brief Gera valores aleatórios dentro das faixas especificadas.
+ *
+ * @param lat Ponteiro para armazenar a latitude gerada.
+ * @param lon Ponteiro para armazenar a longitude gerada.
+ *
+ * Esta função gera valores aleatórios para latitude e longitude dentro das faixas especificadas.
+ *
+ * ### Comportamento:
+ * - Gera um valor aleatório para a latitude dentro da faixa especificada.
+ * - Gera um valor aleatório para a longitude dentro da faixa especificada.
+ *
+ * @note Os valores gerados são armazenados nos parâmetros `lat` e `lon`.
+ */
 void generate_random_coordinates(float *lat, float *lon) {
     float lat_min = -5.813619388080041;
     float lat_max = -5.81018697695044;
@@ -25,35 +71,6 @@ void generate_random_coordinates(float *lat, float *lon) {
     *lat = lat_min + ((float)rand() / RAND_MAX) * (lat_max - lat_min);
     *lon = lon_min + ((float)rand() / RAND_MAX) * (lon_max - lon_min);
 }
-
-// ---------------------------- Definições de Botões ----------------------------
-
-/**
- * @brief Definições de pinos GPIO para os botões.
- */
-#define BUTTON_A 5  ///< Botão para alterar opções/configurações.
-#define BUTTON_B 6   ///< Botão para confirmar/entrar em uma seleção.
-
-
-//----------------------------- Definições do Buzzer -------------------------------
-
-#define BUZZER_PIN 21    			// Pino do buzzer
-#define MIN_FREQUENCY 10 			// Frequência mínima do buzzer (Hz)
-#define MAX_FREQUENCY 2000 			// Frequência máxima do buzzer (Hz)
-#define ADC_UPPER_THRESHOLD 3500 	// Limite superior do ADC para incrementar a frequência
-#define ADC_LOWER_THRESHOLD 850  	// Limite inferior do ADC para decrementar a frequência
-#define STEP 20              		// Incremento ou decremento por iteração
-float frequency = MIN_FREQUENCY;
-int Limit_Buzzer = 0;
-uint8_t x_distance;
-
-//--------------------------------Variáveis provisórias--------------------------------------------
-
-#define TEMPERATURE_UNITS 'C'     // Unidade para medição de temperatura.
-int start_wifi = 0;
-int connected_mqtt = 0;
-float temperature;
-int percentual = 0;
 
 
 // --------------------------- Função de Leitura da Temperatura Interna ---------------------------
@@ -213,26 +230,49 @@ void ftoa(float n, char* res, int afterpoint)
 }
 
 
-//------------------------------ Variáveis do Modo AP -------------------------------
+// --------------------------- Função de Callback do Timer ---------------------------
 
-char *ap_name = "PICO_W_AP";
-char *ap_pw = "raspberry";
-
-//-----------------------------------------------------------------------------------
-
-volatile bool timer_expired = false;
-
-//-----------------------------------------------------------------------------------
-
+/**
+ * @brief Função de callback para o timer.
+ *
+ * @param rt Ponteiro para a estrutura do timer repetitivo.
+ * @return bool Retorna true para continuar chamando o callback.
+ *
+ * Esta função é chamada quando o timer expira. Ela define a flag `timer_expired` como true
+ * para indicar que o timer expirou.
+ *
+ * ### Comportamento:
+ * - Define a flag `timer_expired` como true.
+ * - Retorna true para continuar chamando o callback.
+ *
+ * @note A função depende da variável externa `timer_expired`.
+ */
 bool timer_callback(repeating_timer_t *rt) {
     timer_expired = true;
     return true; // Retorna true para continuar chamando o callback
 }
 
+// --------------------------- Função para Iniciar o Timer ---------------------------
+
+/**
+ * @brief Inicia um timer repetitivo.
+ *
+ * Esta função cria e inicia um timer repetitivo que chama a função de callback `timer_callback`
+ * a cada 2000 milissegundos.
+ *
+ * ### Comportamento:
+ * - Cria um timer repetitivo.
+ * - Inicia o timer com um intervalo de 2000 milissegundos.
+ * - Associa a função de callback `timer_callback` ao timer.
+ *
+ * @note A função depende da função `add_repeating_timer_ms` para criar e iniciar o timer.
+ */
 void start_timer() {
     static repeating_timer_t timer;
-    add_repeating_timer_ms(2000, timer_callback, NULL, &timer); // Timer de 1 segundo
+    add_repeating_timer_ms(2000, timer_callback, NULL, &timer); // Timer de 2 segundos
 }
+
+
 // -------------------------- Função de Filtro Passa-Baixa --------------------------
 
 /**
@@ -439,8 +479,28 @@ void scape_function(void){
 }
 
 
-void not_initialized(void){
+// ---------------------------- Função de Inicialização Não Concluída ----------------------------
 
+/**
+ * @brief Exibe uma mensagem de inicialização não concluída no display SSD1306.
+ *
+ * Esta função exibe uma mensagem no display SSD1306 indicando que a inicialização
+ * do BitDogLab não foi concluída. Ela também chama a função de escape para fornecer
+ * feedback visual e transição entre diferentes telas de menu.
+ *
+ * ### Comportamento:
+ * - Posiciona o cursor no display.
+ * - Exibe a mensagem "Inicialize BitDogLab!".
+ * - Exibe a mensagem "Pressione:".
+ * - Exibe a mensagem "<System Setup>".
+ * - Chama a função de escape para atualizar o display e alternar o estado da tela.
+ *
+ * @note A função depende das funções do driver SSD1306:
+ *   - `ssd1306_SetCursor`: Posiciona o cursor em uma localização (x, y) especificada no display.
+ *   - `ssd1306_WriteString`: Escreve uma string em uma posição especificada (x, y).
+ *   - `scape_function`: Atualiza o display e alterna o estado da tela.
+ */
+void not_initialized(void) {
     ssd1306_SetCursor(4, 23);
     ssd1306_WriteString("Inicialize BitDogLab!", Font_6x8, White);
 
@@ -450,12 +510,33 @@ void not_initialized(void){
     ssd1306_SetCursor(22, 50);
     ssd1306_WriteString("<System Setup>", Font_6x8, White);
     scape_function();
-
 }
 
-int inicialized = 0;
 
-void cabecalho (char *titulo, int x, int y) {
+// ---------------------------- Função de Cabeçalho ----------------------------
+
+/**
+ * @brief Exibe um cabeçalho no display SSD1306.
+ *
+ * @param titulo O título a ser exibido no cabeçalho.
+ * @param x A posição x do cursor no display.
+ * @param y A posição y do cursor no display.
+ *
+ * Esta função exibe um cabeçalho no display SSD1306 com o título especificado.
+ * Ela também desenha um retângulo ao redor do cabeçalho para destacá-lo.
+ *
+ * ### Comportamento:
+ * - Posiciona o cursor no display.
+ * - Exibe o título no cabeçalho.
+ * - Desenha um retângulo ao redor do cabeçalho.
+ *
+ * @note A função depende das funções do driver SSD1306:
+ *   - `ssd1306_SetCursor`: Posiciona o cursor em uma localização (x, y) especificada no display.
+ *   - `ssd1306_WriteString`: Escreve uma string em uma posição especificada (x, y).
+ *   - `ssd1306_FillRectangle`: Preenche um retângulo no display.
+ *   - `ssd1306_DrawRectangle`: Desenha um retângulo no display.
+ */
+void cabecalho(char *titulo, int x, int y) {
     ssd1306_SetCursor(x, y);
     ssd1306_WriteString(titulo, Font_7x10, White);
     ssd1306_FillRectangle(1, 15, 128, 16, White);

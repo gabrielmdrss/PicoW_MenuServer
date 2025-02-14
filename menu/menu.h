@@ -348,7 +348,7 @@ void menu(void) {
                         printf("Conectando ao Wi-Fi...\n");
 
                         // Conecta ao Wi-Fi
-                        if (cyw43_arch_wifi_connect_timeout_ms("PROXXIMA273348-2.4 G", "31230618", CYW43_AUTH_WPA2_AES_PSK, 10000)) {
+                        if (cyw43_arch_wifi_connect_timeout_ms(ssid, password, CYW43_AUTH_WPA2_AES_PSK, 10000)) {
                             printf("Erro: Falha ao conectar ao Wi-Fi.\n");
                             break;  // Encerra o laço
                         }
