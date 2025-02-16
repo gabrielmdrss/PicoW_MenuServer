@@ -81,7 +81,7 @@ int main() {
                 cyw43_arch_deinit();            // Libera recursos do Wi-Fi
                 sleep_ms(500);
 
-                ssd1306_SetCursor(32, 54);
+                ssd1306_SetCursor(40, 54);
                 ssd1306_WriteString("RECEIVED", Font_6x8, White);
                 ssd1306_UpdateScreen();
                 sleep_ms(2000);

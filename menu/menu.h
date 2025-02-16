@@ -29,7 +29,7 @@
 #include "lwip/apps/mqtt.h"						// Biblioteca MQTT para lidar com o protocolo MQTT.
 #include "icons.h"                              // Arquivo contendo ícones para o display SSD1306.
 #include "hardware/timer.h"                     // Biblioteca para operações com temporizadores.     
-#include "http.h"
+#include "http.h"                               // Arquivo contendo funções para o protocolo HTTP.
 #include "defines_functions.h"                  // Arquivo contendo definições e funções para o projeto.
 #include "lwip/tcpip.h"                         // Certifique-se de incluir a biblioteca LWIP
 
@@ -367,11 +367,20 @@ void menu(void) {
                     ssd1306_UpdateScreen();
                 }
                 
-                // Se o percentual não for 100 = Algo interrompeu a finalização do laço
+                // Se o percentual não for 100 = Algo interrompeu a finalização do laço, exibir mensagem de erro, travar funcionamento.
                 if(percentual != 100){
-                    ssd1306_SetCursor(57, 28);
-                    ssd1306_WriteString("INITIALIZATION FAILED", Font_6x8, White);
-                    scape_function();   // Função de escape
+                    ssd1306_Fill(Black);                  
+                    cabecalho("SYSTEM SETUP:", 20, 1);          
+                    ssd1306_SetCursor(20, 24);
+                    ssd1306_WriteString("Falha ao iniciar.", Font_6x8, White);
+                    ssd1306_SetCursor(5, 34);
+                    ssd1306_WriteString("Reinicie dispositivo", Font_6x8, White);
+                    ssd1306_SetCursor(32, 44);
+                    ssd1306_WriteString("e use novas", Font_6x8, White);
+                    ssd1306_SetCursor(5, 54);
+                    ssd1306_WriteString("credenciais de rede.", Font_6x8, White);
+                    ssd1306_UpdateScreen();
+                    while(1);
 
                 // Se não houver interrupção, a inicialização foi bem sucedida
                 } else {
@@ -382,7 +391,7 @@ void menu(void) {
             } else {
 
                 ssd1306_SetCursor(7, 33);
-                ssd1306_WriteString("ALREADY INITIALIZED", Font_6x8, White);
+                ssd1306_WriteString("Ja esta inicializado", Font_6x8, White);
 
             }
 
@@ -527,6 +536,7 @@ void menu(void) {
     ssd1306_UpdateScreen(); // Atualiza o display
 }
 
+
 // ---------------------- Função de Renderização do Menu no AP Mode -----------------------
 
 /**
@@ -568,4 +578,5 @@ void menu_ap (void){
     
     ssd1306_UpdateScreen();                                 // Atualiza o display
 }
+
 #endif /*MENU_H*/

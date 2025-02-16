@@ -42,9 +42,7 @@ char *ap_pw = "raspberry";              // Senha da rede Wi-Fi no modo AP
 volatile bool timer_expired = false;    // Flag para indicar que o timer expirou
 int inicialized = 0;                    // Flag para indicar se o sistema foi inicializado
 
-
 /*--------------------------------------- FUNÇÕES ----------------------------------------*/
-
 
 // --------------------------- Função de Geração de Coordenadas Aleatórias ---------------------------
 
