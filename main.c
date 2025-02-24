@@ -3,6 +3,17 @@
 #include "menu/menu.h"
 #include <time.h>
 
+/*
+    Alguns pontos importantes a serem destacados:
+    1 - Nessa etapa do projeto, apenas dispositivos Android conseguem enviar a senha para o Raspberry Pi Pico W, em iOS e notebooks não foi possível devido a diferentes requisições HTTP geradas
+    2 - Link do ThingSpeak: https://thingspeak.mathworks.com/channels/2838403
+    3 - Link do vídeo de demonstração: https://youtube.com/shorts/M_ZbwZbM4-g?si=VA5z2ySlKUF2r0dz
+    4 - A aplicação iniciará com o AP Mode habilitado e apenas entrará no Menu principal quando alguém clicar no botão de enviar e for retornado Sucesso no envio das credenciais
+    5 - A navegação dentro do menu é dada pelo joystick e botão B (ENTER).
+    4 - Se o ssid ou senha do wifi for escrito incorretamente, só será visível quando já no menu, o usuário clicar em <System Setup> e imprimir o erro e necessidade de reiniciar a placa para enviar novamente
+*/
+
+
 int main() {
 
     stdio_init_all();                   // Inicializa todas as funções de entrada e saída padrão

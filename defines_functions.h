@@ -283,8 +283,8 @@ void start_timer() {
  * O fator de suavização `alpha` determina a influência do novo valor em relação ao valor filtrado anterior.
  */
 uint low_pass_filter(uint new_value) {
-    float alpha = 0.5;            ///< Fator de suavização (0.0 a 1.0)
-    static uint filtered_value = 0; ///< Valor suavizado (preservado entre as chamadas)
+    float alpha = 0.5;              // Fator de suavização (0.0 a 1.0)
+    static uint filtered_value = 0; // Valor suavizado (preservado entre as chamadas)
 
     filtered_value = (alpha * new_value) + ((1 - alpha) * filtered_value);
     return filtered_value;
@@ -321,9 +321,9 @@ void pwm_init_buzzer(uint pin) {
     gpio_set_function(pin, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(pin);
     pwm_config config = pwm_get_default_config();
-    pwm_config_set_clkdiv(&config, 1.0f); // Divisor inicial
+    pwm_config_set_clkdiv(&config, 1.0f);   // Divisor inicial
     pwm_init(slice_num, &config, true);
-    pwm_set_gpio_level(pin, 0); // Inicia com nível baixo
+    pwm_set_gpio_level(pin, 0);             // Inicia com nível baixo
 }
 
 
@@ -358,8 +358,8 @@ void set_buzzer_frequency(uint pin, float frequency) {
     uint32_t top = source_hz / (frequency * divisor);
 
     pwm_set_clkdiv(slice_num, divisor); // Define o divisor
-    pwm_set_wrap(slice_num, top - 1);  // Define o contador superior
-    pwm_set_gpio_level(pin, top / 2);  // Ciclo de trabalho de 50%
+    pwm_set_wrap(slice_num, top - 1);   // Define o contador superior
+    pwm_set_gpio_level(pin, top / 2);   // Ciclo de trabalho de 50%
 }
 
 

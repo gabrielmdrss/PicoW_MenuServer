@@ -11,6 +11,8 @@ _BEGIN_STD_C
 
 #define SSD1306_I2C_CLK 400
 
+#define SSD1306_SET_DISP _u(0xAE)
+
 #ifdef SSD1306_X_OFFSET
 #define SSD1306_X_OFFSET_LOWER (SSD1306_X_OFFSET & 0x0F)
 #define SSD1306_X_OFFSET_UPPER ((SSD1306_X_OFFSET >> 4) & 0x07)
@@ -33,30 +35,30 @@ _BEGIN_STD_C
 
 /* vvv SPI config vvv */
 
-#ifndef SSD1306_SPI_PORT
-#define SSD1306_SPI_PORT        hspi2
-#endif
+// #ifndef SSD1306_SPI_PORT
+// #define SSD1306_SPI_PORT        hspi2
+// #endif
 
-#ifndef SSD1306_CS_Port
-#define SSD1306_CS_Port         GPIOB
-#endif
-#ifndef SSD1306_CS_Pin
-#define SSD1306_CS_Pin          GPIO_PIN_12
-#endif
+// #ifndef SSD1306_CS_Port
+// #define SSD1306_CS_Port         GPIOB
+// #endif
+// #ifndef SSD1306_CS_Pin
+// #define SSD1306_CS_Pin          GPIO_PIN_12
+// #endif
 
-#ifndef SSD1306_DC_Port
-#define SSD1306_DC_Port         GPIOB
-#endif
-#ifndef SSD1306_DC_Pin
-#define SSD1306_DC_Pin          GPIO_PIN_14
-#endif
+// #ifndef SSD1306_DC_Port
+// #define SSD1306_DC_Port         GPIOB
+// #endif
+// #ifndef SSD1306_DC_Pin
+// #define SSD1306_DC_Pin          GPIO_PIN_14
+// #endif
 
-#ifndef SSD1306_Reset_Port
-#define SSD1306_Reset_Port      GPIOA
-#endif
-#ifndef SSD1306_Reset_Pin
-#define SSD1306_Reset_Pin       GPIO_PIN_8
-#endif
+// #ifndef SSD1306_Reset_Port
+// #define SSD1306_Reset_Port      GPIOA
+// #endif
+// #ifndef SSD1306_Reset_Pin
+// #define SSD1306_Reset_Pin       GPIO_PIN_8
+// #endif
 
 /* ^^^ SPI config ^^^ */
 

@@ -10,6 +10,9 @@
 
 #if defined(SSD1306_USE_I2C)
 
+const uint8_t I2C_SDA_PIN = 14;
+const uint8_t I2C_SCL_PIN = 15;
+
 void ssd1306_Reset(void) {
     /* for I2C - do nothing */
 }
@@ -17,10 +20,10 @@ void ssd1306_Reset(void) {
 // Send a byte to the command register
 void ssd1306_WriteCommand(uint8_t byte) {
     uint8_t buffer[2];           // Buffer contendo o registrador e o dado
-    buffer[0] = 0x00;            // Endereço do registrador
+    buffer[0] = 0x80;            // Endereço do registrador
     buffer[1] = byte;            // Dado a ser enviado
 
-    i2c_write_blocking(SSD1306_I2C_PORT, SSD1306_I2C_ADDR, buffer, sizeof(buffer), false);
+    i2c_write_blocking(i2c1, SSD1306_I2C_ADDR, buffer, sizeof(buffer), false);
 }
 
 // Send data
@@ -29,7 +32,7 @@ void ssd1306_WriteData(uint8_t* buffer, size_t buff_size) {
     temp_buffer[0] = 0x40;             // Endereço do registrador (Control byte)
     memcpy(&temp_buffer[1], buffer, buff_size); // Copia os dados para o buffer temporário
 
-    i2c_write_blocking(SSD1306_I2C_PORT, SSD1306_I2C_ADDR, temp_buffer, sizeof(temp_buffer), false);
+    i2c_write_blocking(i2c1, SSD1306_I2C_ADDR, temp_buffer, sizeof(temp_buffer), false);
 }
 
 #else
@@ -63,14 +66,15 @@ void ssd1306_Init(void) {
 
     // I2C is "open drain", pull ups to keep signal high when no data is being
     // sent
-    i2c_init(i2c_default, SSD1306_I2C_CLK * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    i2c_init(i2c1, SSD1306_I2C_CLK * 1000);
+    gpio_set_function(I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA_PIN);
+    gpio_pull_up(I2C_SCL_PIN);
 
     // Init OLED
-    ssd1306_SetDisplayOn(0); //display off
+    //ssd1306_SetDisplayOn(0); //display off
+    ssd1306_WriteCommand(SSD1306_SET_DISP);
 
     ssd1306_WriteCommand(0x20); //Set Memory Addressing Mode
     ssd1306_WriteCommand(0x00); // 00b,Horizontal Addressing Mode; 01b,Vertical Addressing Mode;
